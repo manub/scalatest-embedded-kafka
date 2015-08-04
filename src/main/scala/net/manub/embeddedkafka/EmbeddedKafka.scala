@@ -5,46 +5,51 @@ import java.util.Properties
 import java.util.concurrent.Executors
 
 import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
-import kafka.serializer.StringDecoder
+import kafka.serializer.{StringEncoder, Encoder, StringDecoder}
 import kafka.server.{KafkaConfig, KafkaServer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.{Serializer, StringSerializer}
 import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
-import org.scalatest.Suite
+import org.scalatest.{Suite, SuiteMixin}
 
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.language.{higherKinds, postfixOps}
+import scala.reflect.ClassTag
 import scala.reflect.io.Directory
-import scala.reflect.runtime.universe._
 import scala.util.Try
 
-trait EmbeddedKafka {
-
-  this: Suite =>
+trait EmbeddedKafka extends SuiteMixin { self: Suite =>
 
   val executorService = Executors.newFixedThreadPool(2)
+
   implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
+
+  def config: EmbeddedKafkaConfig
 
   /**
    * Starts a ZooKeeper instance and a Kafka broker, then executes the body passed as a parameter.
    *
-   * @param body the function to execute
-   * @param config an implicit [[EmbeddedKafkaConfig]]
    */
-  def withRunningKafka(body: => Unit)(implicit config: EmbeddedKafkaConfig) = {
+  abstract override def withFixture(test: NoArgTest) = {
 
     val factory = startZooKeeper(config.zooKeeperPort)
     val broker = startKafka(config)
 
-    try {
-      body
-    } finally {
+    try super.withFixture(test)
+    finally {
       broker.shutdown()
       factory.shutdown()
     }
   }
+
+  @throws(classOf[KafkaUnavailableException])
+  def publishToKafka(topic: String, message: String)
+   (implicit config: EmbeddedKafkaConfig): Unit = {
+    publishToKafka[String, String, StringEncoder, StringEncoder](topic, null, message)
+  }
+
 
   /**
    * Publishes asynchronously a message to the running Kafka broker.
@@ -55,17 +60,23 @@ trait EmbeddedKafka {
    * @throws KafkaUnavailableException if unable to connect to Kafka
    */
   @throws(classOf[KafkaUnavailableException])
-  def publishToKafka(topic: String, message: String)(implicit config: EmbeddedKafkaConfig): Unit = {
+  def publishToKafka[
+    K: ClassTag,
+    V: ClassTag,
+    KE <: Encoder[K]: ClassTag,
+    VE <: Encoder[V]: ClassTag
+  ](topic: String, key: K, message: V)
+                          (implicit ke: ClassTag[KE], ve: ClassTag[VE], config: EmbeddedKafkaConfig): Unit = {
 
-    val kafkaProducer = new KafkaProducer[String, String](Map[String, String](
+    val kafkaProducer = new KafkaProducer[K, V](Map[String, String](
       ProducerConfig.BOOTSTRAP_SERVERS_CONFIG       -> s"localhost:${config.kafkaPort}",
-      ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG    -> classOf[StringSerializer].getName,
-      ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG  -> classOf[StringSerializer].getName,
+      ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG    -> ke.runtimeClass.getName,
+      ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG  -> ve.runtimeClass.getName,
       ProducerConfig.METADATA_FETCH_TIMEOUT_CONFIG  -> 3000.toString,
       ProducerConfig.RETRY_BACKOFF_MS_CONFIG        -> 1000.toString
     ))
 
-    val sendFuture = kafkaProducer.send(new ProducerRecord[String, String](topic, message))
+    val sendFuture = kafkaProducer.send(new ProducerRecord[K, V](topic, message))
     val sendResult = Try { sendFuture.get(3, SECONDS) }
 
     kafkaProducer.close()

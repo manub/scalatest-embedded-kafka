@@ -4,18 +4,18 @@ import java.net.InetSocketAddress
 import java.util.Properties
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ Actor, ActorRef, ActorSystem, Props }
 import akka.io.Tcp._
-import akka.io.{IO, Tcp}
-import akka.testkit.{ImplicitSender, TestKit}
-import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
+import akka.io.{ IO, Tcp }
+import akka.testkit.{ ImplicitSender, TestKit }
+import kafka.consumer.{ Consumer, ConsumerConfig, Whitelist }
 import kafka.serializer.StringDecoder
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
-import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
-import org.scalatest.concurrent.{JavaFutures, ScalaFutures}
+import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
+import org.apache.kafka.common.serialization.{ ByteArraySerializer, StringSerializer }
+import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.time.{Milliseconds, Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.time.{ Milliseconds, Seconds, Span }
+import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,10 +24,12 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class EmbeddedKafkaSpec
-  extends TestKit(ActorSystem("embedded-kafka-spec")) with WordSpecLike with EmbeddedKafka with Matchers
-  with ImplicitSender with BeforeAndAfterAll with ScalaFutures with JavaFutures {
+    extends TestKit(ActorSystem("embedded-kafka-spec")) with WordSpecLike with EmbeddedKafka with Matchers
+    with ImplicitSender with BeforeAndAfterAll with ScalaFutures with JavaFutures {
 
-  implicit val config = PatienceConfig(Span(2, Seconds), Span(100, Milliseconds))
+  override implicit val patienceConfig = PatienceConfig(Span(2, Seconds), Span(100, Milliseconds))
+
+  override def config: EmbeddedKafkaConfig = EmbeddedKafkaConfig(zooKeeperPort = 12345)
 
   override def afterAll(): Unit = {
     system.shutdown()
@@ -36,30 +38,19 @@ class EmbeddedKafkaSpec
   "the withRunningKafka method" should {
 
     "start a Kafka broker on port 6001 by default" in {
-
-      withRunningKafka {
-        system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6001), testActor))
-        expectMsg(1 second, ConnectionSuccessful)
-      }
+      system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6001), testActor))
+      expectMsg(1 second, ConnectionSuccessful)
     }
 
     "start a ZooKeeper instance on port 6000 by default" in {
-
-      withRunningKafka {
-        system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6000), testActor))
-        expectMsg(1 second, ConnectionSuccessful)
-      }
-
+      system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6000), testActor))
+      expectMsg(1 second, ConnectionSuccessful)
     }
 
     "stop Kafka and Zookeeper successfully" when {
 
       "the enclosed test passes" in {
-
-        withRunningKafka {
-          true shouldBe true
-        }
-
+        true shouldBe true
         system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6001), testActor))
         expectMsg(1 second, ConnectionFailed)
 
@@ -71,9 +62,7 @@ class EmbeddedKafkaSpec
       "the enclosed test fails" in {
 
         a[TestFailedException] shouldBe thrownBy {
-          withRunningKafka {
-            true shouldBe false
-          }
+          true shouldBe false
         }
 
         system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6001), testActor))
@@ -86,59 +75,46 @@ class EmbeddedKafkaSpec
 
     "start a Kafka broker on a specified port" in {
 
-      implicit val config = EmbeddedKafkaConfig(kafkaPort = 12345)
-
-      withRunningKafka {
-        system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 12345), testActor))
-        expectMsg(1 second, ConnectionSuccessful)
-      }
+      system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 12345), testActor))
+      expectMsg(1 second, ConnectionSuccessful)
     }
 
     "start a Zookeeper server on a specified port" in {
 
-      implicit val config = EmbeddedKafkaConfig(zooKeeperPort = 12345)
-
-      withRunningKafka {
-        system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 12345), testActor))
-        expectMsg(1 second, ConnectionSuccessful)
-      }
+      system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 12345), testActor))
+      expectMsg(1 second, ConnectionSuccessful)
     }
   }
 
   "the publishToKafka method" should {
 
     "publishes asynchronously a message to Kafka as String" in {
+      val message = "hello world!"
+      val topic = "test_topic"
 
-      withRunningKafka {
+      publishToKafka(topic, message)
 
-        val message = "hello world!"
-        val topic = "test_topic"
+      val consumer = Consumer.create(consumerConfigForEmbeddedKafka)
 
-        publishToKafka(topic, message)
+      val filter = new Whitelist("test_topic")
+      val stringDecoder = new StringDecoder
 
-        val consumer = Consumer.create(consumerConfigForEmbeddedKafka)
+      val messageStreams = consumer.createMessageStreamsByFilter(filter, 1, stringDecoder, stringDecoder)
 
-        val filter = new Whitelist("test_topic")
-        val stringDecoder = new StringDecoder
-
-        val messageStreams = consumer.createMessageStreamsByFilter(filter, 1, stringDecoder, stringDecoder)
-
-        val eventualMessage = Future {
-          messageStreams
-            .headOption
-            .getOrElse(throw new RuntimeException("Unable to retrieve message streams"))
-            .iterator()
-            .next()
-            .message()
-        }
-
-        whenReady(eventualMessage) { msg =>
-          msg shouldBe message
-        }
-
-        consumer.shutdown()
+      val eventualMessage = Future {
+        messageStreams
+          .headOption
+          .getOrElse(throw new RuntimeException("Unable to retrieve message streams"))
+          .iterator()
+          .next()
+          .message()
       }
 
+      whenReady(eventualMessage) { msg =>
+        msg shouldBe message
+      }
+
+      consumer.shutdown()
     }
 
     "throws a KafkaUnavailableException when Kafka is unavailable when trying to publish" in {
@@ -152,32 +128,25 @@ class EmbeddedKafkaSpec
   "the consumeFirstMessageFrom method" should {
 
     "returns a message published to a topic" in {
+      val message = "hello world!"
+      val topic = "test_topic"
 
-      withRunningKafka {
+      val producer = new KafkaProducer[String, String](Map(
+        ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:6001",
+        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName,
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName
+      ))
 
-        val message = "hello world!"
-        val topic = "test_topic"
-
-        val producer = new KafkaProducer[String, String](Map(
-          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:6001",
-          ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG   -> classOf[StringSerializer].getName,
-          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName
-        ))
-
-        whenReady(producer.send(new ProducerRecord[String, String](topic, message))) { _ =>
-          consumeFirstMessageFrom(topic) shouldBe message
-        }
-
-        producer.close()
+      whenReady(producer.send(new ProducerRecord[String, String](topic, message))) { _ =>
+        consumeFirstMessageFrom(topic) shouldBe message
       }
+
+      producer.close()
     }
 
     "throws a TimeoutExeption when a message is not available" in {
-
-      withRunningKafka {
-        a[TimeoutException] shouldBe thrownBy {
-          consumeFirstMessageFrom("non_existing_topic")
-        }
+      a[TimeoutException] shouldBe thrownBy {
+        consumeFirstMessageFrom("non_existing_topic")
       }
     }
 
@@ -192,12 +161,8 @@ class EmbeddedKafkaSpec
   "the aKafkaProducerThat method" should {
 
     "return a producer that encodes messages for the given encoder" in {
-
-      withRunningKafka {
-        val producer = aKafkaProducer thatSerializesValuesWith classOf[ByteArraySerializer]
-        producer.send(new ProducerRecord[String, Array[Byte]]("a topic", "a message".getBytes))
-      }
-
+      val producer = aKafkaProducer thatSerializesValuesWith classOf[ByteArraySerializer]
+      producer.send(new ProducerRecord[String, Array[Byte]]("a topic", "a message".getBytes))
     }
   }
 
