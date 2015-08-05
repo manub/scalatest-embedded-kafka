@@ -5,7 +5,7 @@ import java.util.Properties
 import java.util.concurrent.Executors
 
 import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
-import kafka.serializer.{StringEncoder, Encoder, StringDecoder}
+import kafka.serializer.StringDecoder
 import kafka.server.{KafkaConfig, KafkaServer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.{Serializer, StringSerializer}
@@ -26,7 +26,7 @@ trait EmbeddedKafka extends SuiteMixin { self: Suite =>
 
   implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
 
-  def config: EmbeddedKafkaConfig
+  def config: EmbeddedKafkaConfig = EmbeddedKafkaConfig(zooKeeperPort = 12345)
 
   /**
    * Starts a ZooKeeper instance and a Kafka broker, then executes the body passed as a parameter.
@@ -47,7 +47,7 @@ trait EmbeddedKafka extends SuiteMixin { self: Suite =>
   @throws(classOf[KafkaUnavailableException])
   def publishToKafka(topic: String, message: String)
    (implicit config: EmbeddedKafkaConfig): Unit = {
-    publishToKafka[String, String, StringEncoder, StringEncoder](topic, null, message)
+    publishToKafka[String, String, StringSerializer, StringSerializer](topic, null, message)
   }
 
 
@@ -63,8 +63,8 @@ trait EmbeddedKafka extends SuiteMixin { self: Suite =>
   def publishToKafka[
     K: ClassTag,
     V: ClassTag,
-    KE <: Encoder[K]: ClassTag,
-    VE <: Encoder[V]: ClassTag
+    KE <: Serializer[K]: ClassTag,
+    VE <: Serializer[V]: ClassTag
   ](topic: String, key: K, message: V)
                           (implicit ke: ClassTag[KE], ve: ClassTag[VE], config: EmbeddedKafkaConfig): Unit = {
 
