@@ -3,22 +3,25 @@ package net.manub.embeddedkafka
 import java.net.InetSocketAddress
 import java.util.Properties
 import java.util.concurrent.Executors
-
-import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
-import kafka.serializer.{Decoder, StringDecoder}
-import kafka.server.{KafkaConfig, KafkaServer}
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
-import org.apache.kafka.common.serialization.{Serializer, StringSerializer}
-import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
+import kafka.consumer.{ Consumer, ConsumerConfig, Whitelist }
+import kafka.serializer.{ Decoder, StringDecoder }
+import kafka.server.{ KafkaConfig, KafkaServer }
+import kafka.utils.ZkUtils._
+import org.I0Itec.zkclient.ZkClient
+import kafka.admin.AdminUtils
+import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
+import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
+import org.apache.zookeeper.server.{ ServerCnxnFactory, ZooKeeperServer }
 import org.scalatest.Suite
-
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.language.{higherKinds, postfixOps}
+import scala.language.{ higherKinds, postfixOps }
 import scala.reflect.io.Directory
 import scala.util.Try
 import scala.util.control.NonFatal
+import kafka.utils.ZkUtils
+
 
 trait EmbeddedKafka extends EmbeddedKafkaSupport {
   this: Suite =>
@@ -30,10 +33,10 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
   private[this] var broker: Option[KafkaServer] = None
 
   /**
-    * Starts a ZooKeeper instance and a Kafka broker in memory.
-    *
-    * @param config an implicit [[EmbeddedKafkaConfig]]
-    */
+   * Starts a ZooKeeper instance and a Kafka broker in memory.
+   *
+   * @param config an implicit [[EmbeddedKafkaConfig]]
+   */
   def start()(implicit config: EmbeddedKafkaConfig) = {
     factory = Option(startZooKeeper(config.zooKeeperPort))
     broker = Option(startKafka(config))
@@ -48,8 +51,8 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
   }
 
   /**
-    * Stops the in memory ZooKeeper instance and Kafka broker.
-    */
+   * Stops the in memory ZooKeeper instance and Kafka broker.
+   */
   def stop(): Unit = {
     stopKafka()
     stopZooKeeper()
@@ -66,8 +69,8 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
   }
 
   /**
-    * Returns whether the in memory Kafka and Zookeeper are running.
-    */
+   * Returns whether the in memory Kafka and Zookeeper are running.
+   */
   def isRunning: Boolean = factory.nonEmpty && broker.nonEmpty
 }
 
@@ -76,11 +79,11 @@ sealed trait EmbeddedKafkaSupport {
   implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
 
   /**
-    * Starts a ZooKeeper instance and a Kafka broker, then executes the body passed as a parameter.
-    *
-    * @param body the function to execute
-    * @param config an implicit [[EmbeddedKafkaConfig]]
-    */
+   * Starts a ZooKeeper instance and a Kafka broker, then executes the body passed as a parameter.
+   *
+   * @param body the function to execute
+   * @param config an implicit [[EmbeddedKafkaConfig]]
+   */
   def withRunningKafka(body: => Unit)(implicit config: EmbeddedKafkaConfig) = {
 
     val factory = startZooKeeper(config.zooKeeperPort)
@@ -95,36 +98,34 @@ sealed trait EmbeddedKafkaSupport {
   }
 
   /**
-    * Publishes synchronously a message of type [[String]] to the running Kafka broker.
-    *
-    * @see [[EmbeddedKafka#publishToKafka]]
-    * @param topic the topic to which publish the message (it will be auto-created)
-    * @param message the [[String]] message to publish
-    * @param config an implicit [[EmbeddedKafkaConfig]]
-    * @throws KafkaUnavailableException if unable to connect to Kafka
-    */
+   * Publishes synchronously a message of type [[String]] to the running Kafka broker.
+   *
+   * @see [[EmbeddedKafka#publishToKafka]]
+   * @param topic the topic to which publish the message (it will be auto-created)
+   * @param message the [[String]] message to publish
+   * @param config an implicit [[EmbeddedKafkaConfig]]
+   * @throws KafkaUnavailableException if unable to connect to Kafka
+   */
   def publishStringMessageToKafka(topic: String, message: String)(implicit config: EmbeddedKafkaConfig): Unit =
     publishToKafka(topic, message)(config, new StringSerializer)
 
   /**
-    * Publishes synchronously a message to the running Kafka broker.
-    *
-    * @param topic the topic to which publish the message (it will be auto-created)
-    * @param message the message of type [[T]] to publish
-    * @param config an implicit [[EmbeddedKafkaConfig]]
-    * @param serializer an implicit [[Serializer]] for the type [[T]]
-    * @throws KafkaUnavailableException if unable to connect to Kafka
-    */
+   * Publishes synchronously a message to the running Kafka broker.
+   *
+   * @param topic the topic to which publish the message (it will be auto-created)
+   * @param message the message of type [[T]] to publish
+   * @param config an implicit [[EmbeddedKafkaConfig]]
+   * @param serializer an implicit [[Serializer]] for the type [[T]]
+   * @throws KafkaUnavailableException if unable to connect to Kafka
+   */
   @throws(classOf[KafkaUnavailableException])
-  def publishToKafka[T](topic: String, message: T)
-                       (implicit config: EmbeddedKafkaConfig, serializer: Serializer[T]): Unit = {
+  def publishToKafka[T](topic: String, message: T)(implicit config: EmbeddedKafkaConfig, serializer: Serializer[T]): Unit = {
 
     val kafkaProducer = new KafkaProducer(Map(
       ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
       ProducerConfig.METADATA_FETCH_TIMEOUT_CONFIG -> 5000.toString,
       ProducerConfig.MAX_BLOCK_MS_CONFIG -> 10000.toString,
-      ProducerConfig.RETRY_BACKOFF_MS_CONFIG -> 1000.toString
-    ), new StringSerializer, serializer)
+      ProducerConfig.RETRY_BACKOFF_MS_CONFIG -> 1000.toString), new StringSerializer, serializer)
 
     val sendFuture = kafkaProducer.send(new ProducerRecord(topic, message))
     val sendResult = Try {
@@ -140,17 +141,16 @@ sealed trait EmbeddedKafkaSupport {
   def consumeFirstStringMessageFrom(topic: String)(implicit config: EmbeddedKafkaConfig): String =
     consumeFirstMessageFrom(topic)(config, new StringDecoder())
 
-
   /**
-    * Consumes the first message available in a given topic, deserializing it as a String.
-    *
-    * @param topic the topic to consume a message from
-    * @param config an implicit [[EmbeddedKafkaConfig]]
-    * @param decoder an implicit [[Decoder]] for the type [[T]]
-    * @return the first message consumed from the given topic, with a type [[T]]
-    * @throws TimeoutException if unable to consume a message within 5 seconds
-    * @throws KafkaUnavailableException if unable to connect to Kafka
-    */
+   * Consumes the first message available in a given topic, deserializing it as a String.
+   *
+   * @param topic the topic to consume a message from
+   * @param config an implicit [[EmbeddedKafkaConfig]]
+   * @param decoder an implicit [[Decoder]] for the type [[T]]
+   * @return the first message consumed from the given topic, with a type [[T]]
+   * @throws TimeoutException if unable to consume a message within 5 seconds
+   * @throws KafkaUnavailableException if unable to connect to Kafka
+   */
   @throws(classOf[TimeoutException])
   @throws(classOf[KafkaUnavailableException])
   def consumeFirstMessageFrom[T](topic: String)(implicit config: EmbeddedKafkaConfig, decoder: Decoder[T]): T = {
@@ -192,8 +192,7 @@ sealed trait EmbeddedKafkaSupport {
     def thatSerializesValuesWith[V](serializer: Class[_ <: Serializer[V]])(implicit config: EmbeddedKafkaConfig) = {
       val producer = new KafkaProducer[String, V](basicKafkaConfig(config) + (
         ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName,
-        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> serializer.getName)
-      )
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> serializer.getName))
       producers :+= producer
       producer
     }
@@ -207,8 +206,7 @@ sealed trait EmbeddedKafkaSupport {
     def basicKafkaConfig[V](config: EmbeddedKafkaConfig): Map[String, String] = Map(
       ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
       ProducerConfig.METADATA_FETCH_TIMEOUT_CONFIG -> 5000.toString,
-      ProducerConfig.RETRY_BACKOFF_MS_CONFIG -> 1000.toString
-    )
+      ProducerConfig.RETRY_BACKOFF_MS_CONFIG -> 1000.toString)
   }
 
   def startZooKeeper(zooKeeperPort: Int, zkLogsDir: Directory = Directory.makeTemp("zookeeper-logs")): ServerCnxnFactory = {
@@ -222,10 +220,14 @@ sealed trait EmbeddedKafkaSupport {
     factory
   }
 
-  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka")): KafkaServer = {
+  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka"), enableLogCompaction: Boolean = true): KafkaServer = {
     val zkAddress = s"localhost:${config.zooKeeperPort}"
-
+    
     val properties: Properties = new Properties
+    if (enableLogCompaction) {
+      properties.setProperty("log.cleaner.enable", "true")
+      properties.setProperty("log.cleaner.min.cleanable.ratio", "0.1")
+    }
     properties.setProperty("zookeeper.connect", zkAddress)
     properties.setProperty("broker.id", "0")
     properties.setProperty("host.name", "localhost")
@@ -238,4 +240,8 @@ sealed trait EmbeddedKafkaSupport {
     broker.startup()
     broker
   }
+  
+ def createCustomTopic(topic:String , topicConfig: Properties)(implicit config: EmbeddedKafkaConfig): Unit = {     
+      AdminUtils.createTopic(ZkUtils(s"localhost:${config.zooKeeperPort}", 10000, 10000, false), topic, 1, 1, topicConfig)
+ }
 }

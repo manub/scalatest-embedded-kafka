@@ -7,6 +7,7 @@ import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
 import kafka.serializer.StringDecoder
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
+import kafka.admin.AdminUtils
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
@@ -14,6 +15,7 @@ import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
+import kafka.utils.ZkUtils
 
 class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
 
@@ -106,6 +108,25 @@ class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
         consumer.shutdown()
       }
     }
+    
+    
+    "the createCustomTopic method" should {
+    "create a topic with custom configuration" in {
+      implicit val config = EmbeddedKafkaConfig()
+      val topic = "test_topic"
+      
+      withRunningKafka { 
+        val properties: Properties = new Properties
+        properties.put("cleanup.policy", "compact")
+    
+        createCustomTopic(topic,properties)
+         
+        AdminUtils.topicExists(ZkUtils(s"localhost:${config.zooKeeperPort}", 10000, 10000, false), topic) shouldBe true
+      
+      }
+     }
+    }
+    
 
     "throw a KafkaUnavailableException when Kafka is unavailable when trying to publish" in {
       a[KafkaUnavailableException] shouldBe thrownBy {
