@@ -227,7 +227,7 @@ sealed trait EmbeddedKafkaSupport {
     factory
   }
 
-  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka"), enableLogCompaction: Boolean = true): KafkaServer = {
+  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka"), enableLogCompaction: Boolean = false): KafkaServer = {
     val zkAddress = s"localhost:${config.zooKeeperPort}"
     
     val properties: Properties = new Properties
