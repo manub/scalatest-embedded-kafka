@@ -36,6 +36,10 @@ lazy val publishSettings = Seq(
       </developers>
 )
 
+parallelExecution in Test := false
+fork in run := false
+javaOptions += "-Xmx1G"
+
 lazy val releaseSettings = Seq(
   releaseVersionBump := Version.Bump.Minor,
   releaseCrossBuild := true
