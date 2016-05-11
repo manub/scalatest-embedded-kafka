@@ -17,22 +17,22 @@ abstract class EmbeddedKafkaSpecSupport extends TestKit(ActorSystem("embedded-ka
 
   def kafkaIsAvailable(kafkaPort: Int = 6001): Unit = {
     system.actorOf(TcpClient.props(new InetSocketAddress("localhost", kafkaPort), testActor))
-    expectMsg(1 second, ConnectionSuccessful)
+    expectMsg(ConnectionSuccessful)
   }
 
   def zookeeperIsAvailable(zookeeperPort: Int = 6000): Unit = {
     system.actorOf(TcpClient.props(new InetSocketAddress("localhost", zookeeperPort), testActor))
-    expectMsg(1 second, ConnectionSuccessful)
+    expectMsg(ConnectionSuccessful)
   }
 
   def kafkaIsNotAvailable(): Unit = {
     system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6001), testActor))
-    expectMsg(1 second, ConnectionFailed)
+    expectMsg(ConnectionFailed)
   }
 
   def zookeeperIsNotAvailable(): Unit = {
     system.actorOf(TcpClient.props(new InetSocketAddress("localhost", 6000), testActor))
-    expectMsg(1 second, ConnectionFailed)
+    expectMsg(ConnectionFailed)
   }
 
 }
