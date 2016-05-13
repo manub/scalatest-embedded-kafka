@@ -8,7 +8,7 @@ lazy val commonSettings = Seq(
   parallelExecution in Test := false,
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "2.2.5",
-    "org.apache.kafka" %% "kafka" % "0.9.0.0",
+    "org.apache.kafka" %% "kafka" % "0.9.0.1",
     "org.apache.zookeeper" % "zookeeper" % "3.4.7",
     "org.apache.avro" % "avro" % "1.7.7",
 
@@ -36,9 +36,6 @@ lazy val publishSettings = Seq(
       </developers>
 )
 
-parallelExecution in Test := false
-fork in run := false
-javaOptions += "-Xmx1G"
 
 lazy val releaseSettings = Seq(
   releaseVersionBump := Version.Bump.Minor,
