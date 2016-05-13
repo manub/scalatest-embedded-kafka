@@ -220,11 +220,11 @@ sealed trait EmbeddedKafkaSupport {
     factory
   }
 
-  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka"), customBrokerProperties: Map[String,String] = Map()): KafkaServer = {
+  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka")): KafkaServer = {
     val zkAddress = s"localhost:${config.zooKeeperPort}"
     
     val properties: Properties = new Properties
-    customBrokerProperties.foreach(x => properties.setProperty(x._1,x._2))
+    config.customBrokerProperties.foreach(x => properties.setProperty(x._1,x._2))
     properties.setProperty("zookeeper.connect", zkAddress)
     properties.setProperty("broker.id", "0")
     properties.setProperty("host.name", "localhost")

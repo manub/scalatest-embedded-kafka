@@ -118,7 +118,7 @@ class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
 
   "the createCustomTopic method" should {
     "creates a topic with custom configuration" in {
-      implicit val config = EmbeddedKafkaConfig()
+      implicit val config = EmbeddedKafkaConfig(customBrokerProperties=Map("log.cleaner.dedupe.buffer.size"->"2000000"))
       val topic = "test_custom_topic"
 
       withRunningKafka {
