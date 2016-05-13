@@ -40,17 +40,14 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
   def start()(implicit config: EmbeddedKafkaConfig) = {
     factory = Option(startZooKeeper(config.zooKeeperPort))
     broker = Option(startKafka(config))
-    println(s"STARTED BOTH ZK:${config.zooKeeperPort} KAFKA:${config.kafkaPort}=======================================================================================================")
   }
 
   def startZooKeeper(zkLogsDir: Directory)(implicit config: EmbeddedKafkaConfig): Unit = {
     factory = Option(startZooKeeper(config.zooKeeperPort, zkLogsDir))
-    println(s"STARTED ZK ${config.zooKeeperPort}=======================================================================================================")
   }
 
   def startKafka(kafkaLogDir: Directory)(implicit config: EmbeddedKafkaConfig): Unit = {
     broker = Option(startKafka(config, kafkaLogDir))
-    println(s"STARTED KAFKA ${config.kafkaPort}=======================================================================================================")
   }
 
   /**
@@ -59,18 +56,15 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
   def stop(): Unit = {
     stopKafka()
     stopZooKeeper()
-    println("STOPPED BOTH=======================================================================================================")
   }
 
   def stopZooKeeper(): Unit = {
     factory.foreach(_.shutdown())
-    println("STOPPED ZK=======================================================================================================")
     factory = None
   }
 
   def stopKafka(): Unit = {
     broker.foreach(_.shutdown)
-    println("STOPPED KAFKA=======================================================================================================")
     broker = None
   }
 
@@ -223,19 +217,14 @@ sealed trait EmbeddedKafkaSupport {
     val factory = ServerCnxnFactory.createFactory
     factory.configure(new InetSocketAddress("localhost", zooKeeperPort), 1024)
     factory.startup(zkServer)
-    println("STARTED ZK=======================================================================================================")
     factory
   }
 
-  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka"), enableLogCompaction: Boolean = false): KafkaServer = {
+  def startKafka(config: EmbeddedKafkaConfig, kafkaLogDir: Directory = Directory.makeTemp("kafka"), customBrokerProperties: Map[String,String] = Map()): KafkaServer = {
     val zkAddress = s"localhost:${config.zooKeeperPort}"
     
     val properties: Properties = new Properties
-    if (enableLogCompaction) {
-      properties.setProperty("log.cleaner.enable", "true")
-      properties.setProperty("log.cleaner.min.cleanable.ratio", "0.1")
-      properties.setProperty("log.cleaner.dedupe.buffer.size","2000000")
-    }
+    customBrokerProperties.foreach(x => properties.setProperty(x._1,x._2))
     properties.setProperty("zookeeper.connect", zkAddress)
     properties.setProperty("broker.id", "0")
     properties.setProperty("host.name", "localhost")
@@ -246,7 +235,6 @@ sealed trait EmbeddedKafkaSupport {
 
     val broker = new KafkaServer(new KafkaConfig(properties))
     broker.startup()
-    println("STARTED KAFKA=======================================================================================================")
     broker
   }
   

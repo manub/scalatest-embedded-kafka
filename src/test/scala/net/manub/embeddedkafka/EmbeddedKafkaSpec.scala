@@ -3,13 +3,13 @@ package net.manub.embeddedkafka
 import java.util.Properties
 import java.util.concurrent.TimeoutException
 
-import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
+import kafka.consumer.{ Consumer, ConsumerConfig, Whitelist }
 import kafka.serializer.StringDecoder
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
-import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
+import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
+import org.apache.kafka.common.serialization.{ ByteArraySerializer, StringSerializer }
 import kafka.admin.AdminUtils
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.time.{Milliseconds, Seconds, Span}
+import org.scalatest.time.{ Milliseconds, Seconds, Span }
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -108,29 +108,27 @@ class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
         consumer.shutdown()
       }
     }
-    
-    
-    "the createCustomTopic method" should {
-    "create a topic with custom configuration" in {
-      implicit val config = EmbeddedKafkaConfig()
-      val topic = "test_topic"
-      
-      withRunningKafka { 
-        val properties: Properties = new Properties
-        properties.put("cleanup.policy", "compact")
-    
-        createCustomTopic(topic,properties)
-         
-        AdminUtils.topicExists(ZkUtils(s"localhost:${config.zooKeeperPort}", 10000, 10000, false), topic) shouldBe true
-      
-      }
-     }
-    }
-    
 
     "throw a KafkaUnavailableException when Kafka is unavailable when trying to publish" in {
       a[KafkaUnavailableException] shouldBe thrownBy {
         publishStringMessageToKafka("non_existing_topic", "a message")
+      }
+    }
+  }
+
+  "the createCustomTopic method" should {
+    "creates a topic with custom configuration" in {
+      implicit val config = EmbeddedKafkaConfig()
+      val topic = "test_custom_topic"
+
+      withRunningKafka {
+        val properties: Properties = new Properties
+        properties.put("cleanup.policy", "compact")
+
+        createCustomTopic(topic, properties)
+
+        AdminUtils.topicExists(ZkUtils(s"localhost:${config.zooKeeperPort}", 10000, 10000, false), topic) shouldBe true
+
       }
     }
   }
@@ -144,8 +142,7 @@ class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
         val producer = new KafkaProducer[String, String](Map(
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:6001",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName,
-          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName
-        ))
+          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName))
 
         whenReady(producer.send(new ProducerRecord[String, String](topic, message))) { _ =>
           consumeFirstStringMessageFrom(topic) shouldBe message
@@ -163,8 +160,7 @@ class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
         val producer = new KafkaProducer[String, String](Map(
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:6001",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName,
-          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName
-        ))
+          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName))
 
         import Codecs._
         whenReady(producer.send(new ProducerRecord[String, String](topic, message))) { _ =>
@@ -185,8 +181,7 @@ class EmbeddedKafkaSpec extends EmbeddedKafkaSpecSupport with EmbeddedKafka {
         implicit val testAvroClassDecoder = specificAvroDecoder[TestAvroClass](TestAvroClass.SCHEMA$)
 
         val producer = new KafkaProducer[String, TestAvroClass](Map(
-          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:6001"
-        ), new StringSerializer, specificAvroSerializer[TestAvroClass])
+          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:6001"), new StringSerializer, specificAvroSerializer[TestAvroClass])
 
         whenReady(producer.send(new ProducerRecord(topic, message))) { _ =>
           consumeFirstMessageFrom[TestAvroClass](topic) shouldBe message
