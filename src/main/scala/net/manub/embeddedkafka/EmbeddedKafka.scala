@@ -4,9 +4,11 @@ import java.net.InetSocketAddress
 import java.util.Properties
 import java.util.concurrent.Executors
 
+import kafka.admin.AdminUtils
 import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
 import kafka.serializer.{Decoder, StringDecoder}
 import kafka.server.{KafkaConfig, KafkaServer}
+import kafka.utils.ZkUtils
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.{Serializer, StringSerializer}
 import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
@@ -226,6 +228,7 @@ sealed trait EmbeddedKafkaSupport {
     val zkAddress = s"localhost:${config.zooKeeperPort}"
 
     val properties: Properties = new Properties
+    config.customBrokerProperties.foreach { case (key, value) => properties.setProperty(key, value) }
     properties.setProperty("zookeeper.connect", zkAddress)
     properties.setProperty("broker.id", "0")
     properties.setProperty("host.name", "localhost")
@@ -238,5 +241,13 @@ sealed trait EmbeddedKafkaSupport {
     val broker = new KafkaServer(new KafkaConfig(properties))
     broker.startup()
     broker
+  }
+
+  def createCustomTopic(topic: String, topicConfig: Properties)(implicit config: EmbeddedKafkaConfig): Unit = {
+    val zkSessionTimeoutMs  = 10000
+    val zkConnectionTimeoutMs = 10000
+    val zkSecurityEnabled = false
+
+    AdminUtils.createTopic(ZkUtils(s"localhost:${config.zooKeeperPort}", zkSessionTimeoutMs, zkConnectionTimeoutMs, zkSecurityEnabled), topic, 1, 1, topicConfig)
   }
 }
