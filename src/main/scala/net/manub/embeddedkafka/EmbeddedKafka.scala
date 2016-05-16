@@ -77,6 +77,10 @@ sealed trait EmbeddedKafkaSupport {
   val executorService = Executors.newFixedThreadPool(2)
   implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
 
+  val zkSessionTimeoutMs  = 10000
+  val zkConnectionTimeoutMs = 10000
+  val zkSecurityEnabled = false
+
   /**
     * Starts a ZooKeeper instance and a Kafka broker, then executes the body passed as a parameter.
     *
@@ -244,10 +248,6 @@ sealed trait EmbeddedKafkaSupport {
   }
 
   def createCustomTopic(topic: String, topicConfig: Properties)(implicit config: EmbeddedKafkaConfig): Unit = {
-    val zkSessionTimeoutMs  = 10000
-    val zkConnectionTimeoutMs = 10000
-    val zkSecurityEnabled = false
-
     AdminUtils.createTopic(ZkUtils(s"localhost:${config.zooKeeperPort}", zkSessionTimeoutMs, zkConnectionTimeoutMs, zkSecurityEnabled), topic, 1, 1, topicConfig)
   }
 }
