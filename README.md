@@ -5,6 +5,8 @@ The version supporting Kafka 0.8.x can be found [here](https://github.com/manub/
 
 Inspired by https://github.com/chbatey/kafka-unit
 
+[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/manub/scalatest-embedded-kafka)
+
 ## How to use
 
 scalatest-embedded-kafka is available on Bintray and Maven Central, compiled for both Scala 2.10 and 2.11
@@ -60,6 +62,12 @@ It's possible to change the ports on which Zookeeper and Kafka are started by pr
         }
         
 This works for both `withRunningKafka` and `EmbeddedKafka.start()`
+
+Also, it is now possible to provide custom properties to the broker while starting Kafka. `EmbeddedKafkaConfig` has a 
+`customBrokerProperties` field which can be used to provide extra properties contained in a `Map[String, String]`.
+Those properties will be added to the broker configuration, however some properties are set by the library itself and 
+in case of conflict the library values will take precedence. Please look at the source code to see what this properties
+are.
         
 ## Utility methods
 
