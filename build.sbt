@@ -9,14 +9,15 @@ lazy val commonSettings = Seq(
   crossScalaVersions := Seq("2.10.6", "2.11.8"),
   homepage := Some(url("https://github.com/manub/scalatest-embedded-kafka")),
   parallelExecution in Test := false,
-  libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "2.2.5",
+  libraryDependencies <++= (scalaVersion) { scalaVersion => Seq(
+    "org.scala-lang" % "scala-reflect" % scalaVersion,
     "org.apache.kafka" %% "kafka" % "0.10.0.1" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
     "org.apache.zookeeper" % "zookeeper" % "3.4.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
     "org.apache.avro" % "avro" % "1.7.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
     "com.typesafe.akka" %% "akka-actor" % "2.3.14" % Test,
-    "com.typesafe.akka" %% "akka-testkit" % "2.3.14" % Test
-  )
+    "com.typesafe.akka" %% "akka-testkit" % "2.3.14" % Test,
+    "org.scalatest" %% "scalatest" % "2.2.5" % Test
+  ) }
 )
 
 lazy val publishSettings = Seq(
