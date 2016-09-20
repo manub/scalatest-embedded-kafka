@@ -12,7 +12,6 @@ import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, Produce
 import org.apache.kafka.common.KafkaException
 import org.apache.kafka.common.serialization.{Deserializer, Serializer, StringDeserializer, StringSerializer}
 import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
-import org.scalatest.Suite
 
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.concurrent.duration._
@@ -21,9 +20,7 @@ import scala.language.{higherKinds, postfixOps}
 import scala.reflect.io.Directory
 import scala.util.Try
 
-trait EmbeddedKafka extends EmbeddedKafkaSupport {
-  this: Suite =>
-}
+trait EmbeddedKafka extends EmbeddedKafkaSupport
 
 object EmbeddedKafka extends EmbeddedKafkaSupport {
 
