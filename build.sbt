@@ -1,10 +1,11 @@
 import sbtrelease.Version
 
+val kafkaVersion = "0.10.0.1"
+
 val slf4jLog4jOrg = "org.slf4j"
 val slf4jLog4jArtifact = "slf4j-log4j12"
 
 lazy val commonSettings = Seq(
-  name := "scalatest-embedded-kafka",
   organization := "net.manub",
   scalaVersion := "2.11.8",
   crossScalaVersions := Seq("2.10.6", "2.11.8"),
@@ -12,7 +13,7 @@ lazy val commonSettings = Seq(
   parallelExecution in Test := false,
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "3.0.0",
-    "org.apache.kafka" %% "kafka" % "0.10.0.1" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
+    "org.apache.kafka" %% "kafka" % kafkaVersion exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
     "org.apache.zookeeper" % "zookeeper" % "3.4.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
     "org.apache.avro" % "avro" % "1.7.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
     "com.typesafe.akka" %% "akka-actor" % "2.3.14" % Test,
@@ -47,6 +48,12 @@ lazy val releaseSettings = Seq(
 )
 
 lazy val root = (project in file("."))
+    .settings(name := "scalatest-embedded-kafka-root")
+    .aggregate(embeddedKafka)
+
+
+lazy val embeddedKafka = (project in file("embedded-kafka"))
+  .settings(name := "scalatest-embedded-kafka")
   .settings(publishSettings: _*)
   .settings(commonSettings: _*)
   .settings(releaseSettings: _*)
