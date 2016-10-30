@@ -2,7 +2,7 @@ import sbtrelease.Version
 
 parallelExecution in ThisBuild := false
 
-val kafkaVersion = "0.10.0.1"
+val kafkaVersion = "0.8.2.2"
 
 val slf4jLog4jOrg = "org.slf4j"
 val slf4jLog4jArtifact = "slf4j-log4j12"
@@ -20,9 +20,9 @@ lazy val commonSettings = Seq(
 
 
 lazy val commonLibrarySettings = libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.0",
+  "org.scalatest" %% "scalatest" % "2.2.5",
   "org.apache.kafka" %% "kafka" % kafkaVersion exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
-  "org.apache.zookeeper" % "zookeeper" % "3.4.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
+  "org.apache.zookeeper" % "zookeeper" % "3.4.6" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
   "org.apache.avro" % "avro" % "1.7.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
   "com.typesafe.akka" %% "akka-actor" % "2.3.14" % Test,
   "com.typesafe.akka" %% "akka-testkit" % "2.3.14" % Test
