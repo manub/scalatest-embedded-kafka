@@ -19,6 +19,3 @@ before_cache:
   - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
   - find $HOME/.sbt -name "*.lock" -delete
 
-script: 
-  - sbt ++$TRAVIS_SCALA_VERSION embeddedKafka/test kafkaStreams/test
-
