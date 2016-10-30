@@ -62,7 +62,7 @@ lazy val root = (project in file("."))
   .settings(releaseSettings: _*)
   .disablePlugins(BintrayPlugin)
   .settings(publishTo := Some(Resolver.defaultLocal))
-  .aggregate(embeddedKafka, kafkaStreams)
+  .aggregate(embeddedKafka)
 
 
 lazy val embeddedKafka = (project in file("embedded-kafka"))
@@ -71,14 +71,3 @@ lazy val embeddedKafka = (project in file("embedded-kafka"))
   .settings(commonSettings: _*)
   .settings(commonLibrarySettings)
   .settings(releaseSettings: _*)
-
-lazy val kafkaStreams = (project in file("kafka-streams"))
-  .settings(name := "scalatest-embedded-kafka-streams")
-  .settings(publishSettings: _*)
-  .settings(commonSettings: _*)
-  .settings(commonLibrarySettings)
-  .settings(releaseSettings: _*)
-  .settings(libraryDependencies ++= Seq(
-    "org.apache.kafka" % "kafka-streams" % kafkaVersion exclude(slf4jLog4jOrg, slf4jLog4jArtifact)
-  ))
-  .dependsOn(embeddedKafka)
