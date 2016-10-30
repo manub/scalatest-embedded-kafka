@@ -232,6 +232,7 @@ sealed trait EmbeddedKafkaSupport {
     properties.setProperty("port", config.kafkaPort.toString)
     properties.setProperty("log.dir", kafkaLogDir.toAbsolute.path)
     properties.setProperty("log.flush.interval.messages", 1.toString)
+    properties.setProperty("advertised.host.name", "localhost")
 
     val broker = new KafkaServer(new KafkaConfig(properties))
     broker.startup()
