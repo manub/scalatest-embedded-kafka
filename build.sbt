@@ -1,27 +1,40 @@
 import sbtrelease.Version
 
+parallelExecution in ThisBuild := false
+
+val kafkaVersion = "0.8.2.2"
+
+val slf4jLog4jOrg = "org.slf4j"
+val slf4jLog4jArtifact = "slf4j-log4j12"
+
 lazy val commonSettings = Seq(
-  name := "scalatest-embedded-kafka",
   organization := "net.manub",
-  crossScalaVersions := Seq("2.10.6", "2.11.7"),
+  scalaVersion := "2.11.8",
+  crossScalaVersions := Seq("2.10.6", "2.11.8"),
   homepage := Some(url("https://github.com/manub/scalatest-embedded-kafka")),
   parallelExecution in Test := false,
-  libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "2.2.5",
-    "org.apache.kafka" %% "kafka" % "0.8.2.2",
-    "org.apache.zookeeper" % "zookeeper" % "3.4.6",
-    "org.apache.avro" % "avro" % "1.7.7",
+  logBuffered in Test := false,
+  fork in Test := true,
+  javaOptions += "-Xmx1G"
+)
 
-    "com.typesafe.akka" %% "akka-actor" % "2.3.14" % Test,
-    "com.typesafe.akka" %% "akka-testkit" % "2.3.14" % Test
-  )
+
+lazy val commonLibrarySettings = libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "2.2.5",
+  "org.apache.kafka" %% "kafka" % kafkaVersion exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
+  "org.apache.zookeeper" % "zookeeper" % "3.4.6" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
+  "org.apache.avro" % "avro" % "1.7.7" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
+  "com.typesafe.akka" %% "akka-actor" % "2.3.14" % Test,
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.14" % Test
 )
 
 lazy val publishSettings = Seq(
-  licenses +=("MIT", url("http://opensource.org/licenses/MIT")),
+  licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
   publishMavenStyle := true,
   publishArtifact in Test := false,
-  pomIncludeRepository := { _ => false },
+  pomIncludeRepository := { _ =>
+    false
+  },
   pomExtra :=
     <scm>
       <url>https://github.com/manub/scalatest-embedded-kafka</url>
@@ -42,6 +55,19 @@ lazy val releaseSettings = Seq(
 )
 
 lazy val root = (project in file("."))
+  .settings(name := "scalatest-embedded-kafka-root")
+  .settings(commonSettings: _*)
+  .settings(publishArtifact := false)
+  .settings(publish := {})
+  .settings(releaseSettings: _*)
+  .disablePlugins(BintrayPlugin)
+  .settings(publishTo := Some(Resolver.defaultLocal))
+  .aggregate(embeddedKafka)
+
+
+lazy val embeddedKafka = (project in file("embedded-kafka"))
+  .settings(name := "scalatest-embedded-kafka")
   .settings(publishSettings: _*)
   .settings(commonSettings: _*)
+  .settings(commonLibrarySettings)
   .settings(releaseSettings: _*)
