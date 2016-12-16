@@ -242,7 +242,7 @@ sealed trait EmbeddedKafkaSupport {
     props.put("group.id", s"embedded-kafka-spec")
     props.put("bootstrap.servers", s"localhost:${config.kafkaPort}")
     props.put("auto.offset.reset", "earliest")
-    props.put("enable.auto.commit", s"${config.autoCommit}")
+    props.put("enable.auto.commit", autoCommit.toString)
 
     val consumer =
       new KafkaConsumer[String, T](props, new StringDeserializer, deserializer)
