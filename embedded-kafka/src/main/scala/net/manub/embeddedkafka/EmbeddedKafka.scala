@@ -209,7 +209,7 @@ sealed trait EmbeddedKafkaSupport {
     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
     ProducerConfig.MAX_BLOCK_MS_CONFIG -> 10000.toString,
     ProducerConfig.RETRY_BACKOFF_MS_CONFIG -> 1000.toString
-  )
+  ) ++ config.customProducerProperties
 
   private def baseConsumerConfig(implicit config: EmbeddedKafkaConfig) : Properties = {
     val props = new Properties()
