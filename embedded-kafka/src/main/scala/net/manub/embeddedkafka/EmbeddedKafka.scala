@@ -217,6 +217,7 @@ sealed trait EmbeddedKafkaSupport {
     props.put("bootstrap.servers", s"localhost:${config.kafkaPort}")
     props.put("auto.offset.reset", "earliest")
     props.put("enable.auto.commit", "false")
+    props.putAll(config.customConsumerProperties)
     props
   }
 
