@@ -13,7 +13,8 @@ class ConsumerOpsSpec extends EmbeddedKafkaSpecSupport with MockitoSugar {
   "ConsumeLazily " should {
     "retry to get messages with the configured maximum number of attempts when poll fails" in {
       val consumer = mock[KafkaConsumer[String, String]]
-      val consumerRecords = new ConsumerRecords[String, String](mapAsJavaMap(Map.empty))
+      val consumerRecords =
+        new ConsumerRecords[String, String](Map.empty[TopicPartition, java.util.List[ConsumerRecord[String, String]]].asJava)
 
       val pollTimeout = 1
       when(consumer.poll(pollTimeout)).thenReturn(consumerRecords)
@@ -28,7 +29,7 @@ class ConsumerOpsSpec extends EmbeddedKafkaSpecSupport with MockitoSugar {
       val consumer = mock[KafkaConsumer[String, String]]
       val consumerRecord = mock[ConsumerRecord[String, String]]
       val consumerRecords = new ConsumerRecords[String, String](
-        mapAsJavaMap(Map[TopicPartition, java.util.List[ConsumerRecord[String, String]]](new TopicPartition("topic", 1) -> List(consumerRecord).asJava))
+        Map[TopicPartition, java.util.List[ConsumerRecord[String, String]]](new TopicPartition("topic", 1) -> List(consumerRecord).asJava).asJava
       )
 
       val pollTimeout = 1
@@ -42,7 +43,8 @@ class ConsumerOpsSpec extends EmbeddedKafkaSpecSupport with MockitoSugar {
 
     "poll to get messages with the configured poll timeout" in {
       val consumer = mock[KafkaConsumer[String, String]]
-      val consumerRecords = new ConsumerRecords[String, String](mapAsJavaMap(Map.empty))
+      val consumerRecords =
+        new ConsumerRecords[String, String](Map.empty[TopicPartition, java.util.List[ConsumerRecord[String, String]]].asJava)
 
       val pollTimeout = 10
       when(consumer.poll(pollTimeout)).thenReturn(consumerRecords)
