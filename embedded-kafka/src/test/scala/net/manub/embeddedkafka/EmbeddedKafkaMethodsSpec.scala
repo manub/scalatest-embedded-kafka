@@ -156,8 +156,9 @@ class EmbeddedKafkaMethodsSpec
     }
 
     "consume only a single message when multiple messages have been published to a topic" in {
-      val messages = Set("message 1", "message 2", "message 3")
       val topic = "consume_test_topic"
+      val numMessages = 300
+      val messages = (1 to numMessages).map("Message " + _)
 
       val producer = new KafkaProducer[String, String](
         Map(
@@ -174,11 +175,11 @@ class EmbeddedKafkaMethodsSpec
 
       producer.flush()
 
-      val consumedMessages = for (i <- 1 to messages.size) yield {
+      val consumedMessages = for (i <- 1 to numMessages) yield {
         consumeFirstStringMessageFrom(topic)
       }
 
-      consumedMessages.toSet shouldEqual messages
+      consumedMessages shouldEqual messages
 
       producer.close()
     }
