@@ -131,24 +131,27 @@ sealed trait EmbeddedKafkaSupport {
     */
   def withRunningKafka[T](body: => T)(
       implicit config: EmbeddedKafkaConfig): T = {
-
-    def cleanLogs(directories: Directory*): Unit = {
-      directories.foreach(_.deleteRecursively())
+    withTempDir("zookeeper-logs") { zkLogsDir =>
+      withTempDir("kafka") { kafkaLogsDir =>
+        val factory = startZooKeeper(config.zooKeeperPort, zkLogsDir)
+        val broker = startKafka(config, kafkaLogsDir)
+        try {
+          body
+        } finally {
+          broker.shutdown()
+          broker.awaitShutdown()
+          factory.shutdown()
+        }
+      }
     }
+  }
 
-    val zkLogsDir = Directory.makeTemp("zookeeper-logs")
-    val kafkaLogsDir = Directory.makeTemp("kafka")
-
-    val factory = startZooKeeper(config.zooKeeperPort, zkLogsDir)
-    val broker = startKafka(config, kafkaLogsDir)
-
+  private def withTempDir[T](prefix: String)(body: Directory => T): T = {
+    val dir = Directory.makeTemp(prefix)
     try {
-      body
+      body(dir)
     } finally {
-      broker.shutdown()
-      broker.awaitShutdown()
-      factory.shutdown()
-      cleanLogs(zkLogsDir, kafkaLogsDir)
+      dir.deleteRecursively()
     }
   }
 
