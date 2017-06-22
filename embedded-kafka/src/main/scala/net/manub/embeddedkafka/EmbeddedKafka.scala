@@ -129,8 +129,8 @@ sealed trait EmbeddedKafkaSupport {
     * @param body   the function to execute
     * @param config an implicit [[EmbeddedKafkaConfig]]
     */
-  def withRunningKafka(body: => Any)(
-      implicit config: EmbeddedKafkaConfig): Any = {
+  def withRunningKafka[T](body: => T)(
+      implicit config: EmbeddedKafkaConfig): T = {
 
     def cleanLogs(directories: Directory*): Unit = {
       directories.foreach(_.deleteRecursively())
