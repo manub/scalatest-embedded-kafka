@@ -131,17 +131,26 @@ sealed trait EmbeddedKafkaSupport {
     */
   def withRunningKafka[T](body: => T)(
       implicit config: EmbeddedKafkaConfig): T = {
-    withTempDir("zookeeper-logs") { zkLogsDir =>
+    withRunningZooKeeper(config.zooKeeperPort) { zkPort =>
       withTempDir("kafka") { kafkaLogsDir =>
-        val factory = startZooKeeper(config.zooKeeperPort, zkLogsDir)
-        val broker = startKafka(config, kafkaLogsDir)
+        val broker = startKafka(config.copy(zooKeeperPort = zkPort), kafkaLogsDir)
         try {
           body
         } finally {
           broker.shutdown()
           broker.awaitShutdown()
-          factory.shutdown()
         }
+      }
+    }
+  }
+
+  private def withRunningZooKeeper[T](port: Int)(body: Int => T): T = {
+    withTempDir("zookeeper-logs") { zkLogsDir =>
+      val factory = startZooKeeper(port, zkLogsDir)
+      try {
+        body(factory.getLocalPort)
+      } finally {
+        factory.shutdown()
       }
     }
   }
