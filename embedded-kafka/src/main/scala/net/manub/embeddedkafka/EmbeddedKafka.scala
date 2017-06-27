@@ -285,9 +285,9 @@ sealed trait EmbeddedKafkaSupport {
       new StringDeserializer())
 
   /**
-    * Consumes the first message available in a given topic, deserializing it as a String.
+    * Consumes the first message available in a given topic, deserializing it as type [[T]].
     *
-    * Only the messsage that is returned is committed if autoCommit is false.
+    * Only the message that is returned is committed if autoCommit is false.
     * If autoCommit is true then all messages that were polled will be committed.
     *
     * @param topic        the topic to consume a message from
@@ -339,20 +339,20 @@ sealed trait EmbeddedKafkaSupport {
   }
 
   /**
-    * Consumes the first n messages available in a given topic, deserializing it as a String, and returns
+    * Consumes the first n messages available in a given topic, deserializes them as type [[T]], and returns
     * the n messages as a List.
     *
-    * Only the messsages that are returned are committed if autoCommit is false.
+    * Only the messages that are returned are committed if autoCommit is false.
     * If autoCommit is true then all messages that were polled will be committed.
     *
-    * @param topic        the topic to consume a message from
-    * @param number       the number of messagese to consume in a batch
-    * @param autoCommit   if false, only the offset for the consumed message will be commited.
+    * @param topic        the topic to consume messages from
+    * @param number       the number of messages to consume in a batch
+    * @param autoCommit   if false, only the offset for the consumed messages will be commited.
     *                     if true, the offset for the last polled message will be committed instead.
     *                     Defaulted to false.
     * @param config       an implicit [[EmbeddedKafkaConfig]]
     * @param deserializer an implicit [[org.apache.kafka.common.serialization.Deserializer]] for the type [[T]]
-    * @return the first message consumed from the given topic, with a type [[T]]
+    * @return the List of messages consumed from the given topic, each with a type [[T]]
     * @throws TimeoutException          if unable to consume a message within 5 seconds
     * @throws KafkaUnavailableException if unable to connect to Kafka
     */
