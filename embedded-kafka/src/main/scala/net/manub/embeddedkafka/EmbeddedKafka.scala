@@ -304,39 +304,8 @@ sealed trait EmbeddedKafkaSupport {
   @throws(classOf[KafkaUnavailableException])
   def consumeFirstMessageFrom[T](topic: String, autoCommit: Boolean = false)(
       implicit config: EmbeddedKafkaConfig,
-      deserializer: Deserializer[T]): T = {
-
-    import scala.collection.JavaConversions._
-
-    val props = baseConsumerConfig
-    props.put("enable.auto.commit", autoCommit.toString)
-
-    val consumer =
-      new KafkaConsumer[String, T](props, new StringDeserializer, deserializer)
-
-    val message = Try {
-      consumer.subscribe(List(topic))
-      consumer.partitionsFor(topic) // as poll doesn't honour the timeout, forcing the consumer to fail here.
-      val records = consumer.poll(5000)
-      if (records.isEmpty) {
-        throw new TimeoutException(
-          "Unable to retrieve a message from Kafka in 5000ms")
-      }
-
-      val record = records.iterator().next()
-
-      val tp = new TopicPartition(record.topic(), record.partition())
-      val om = new OffsetAndMetadata(record.offset() + 1)
-      consumer.commitSync(Map(tp -> om))
-
-      record.value()
-    }
-
-    consumer.close()
-    message.recover {
-      case ex: KafkaException => throw new KafkaUnavailableException(ex)
-    }.get
-  }
+      deserializer: Deserializer[T]): T =
+  consumeNumberMessagesFrom(topic, 1, autoCommit)(config, deserializer).head
 
   /**
     * Consumes the first n messages available in a given topic, deserializes them as type [[T]], and returns
