@@ -326,15 +326,22 @@ sealed trait EmbeddedKafkaSupport {
     * @param autoCommit   if false, only the offset for the consumed messages will be commited.
     *                     if true, the offset for the last polled message will be committed instead.
     *                     Defaulted to false.
+    * @param timeout      the interval to wait for messages before throwing TimeoutException
+    * @param resetTimeoutOnEachMessage when true, throw TimeoutException if we have a silent period
+    *                                  (no incoming messages) for the timeout interval; when false,
+    *                                  throw TimeoutException after the timeout interval if we
+    *                                  haven't received all of the expected messages
     * @param config       an implicit [[EmbeddedKafkaConfig]]
     * @param deserializer an implicit [[org.apache.kafka.common.serialization.Deserializer]] for the type [[T]]
     * @return the List of messages consumed from the given topics, each with a type [[T]]
-    * @throws TimeoutException          if unable to consume a message within 5 seconds
+    * @throws TimeoutException          if unable to consume messages within specified timeout
     * @throws KafkaUnavailableException if unable to connect to Kafka
     */
   def consumeNumberMessagesFromTopics[T](topics: Set[String],
                                          number: Int,
-                                         autoCommit: Boolean = false)(
+                                         autoCommit: Boolean = false,
+                                         timeout: Duration = 5.seconds,
+                                         resetTimeoutOnEachMessage: Boolean = true)(
       implicit config: EmbeddedKafkaConfig,
       deserializer: Deserializer[T]): Map[String, List[T]] = {
 
@@ -343,6 +350,7 @@ sealed trait EmbeddedKafkaSupport {
     val props = baseConsumerConfig
     props.put("enable.auto.commit", autoCommit.toString)
 
+    var timeoutNanoTime = System.nanoTime + timeout.toNanos
     val consumer =
       new KafkaConsumer[String, T](props, new StringDeserializer, deserializer)
 
@@ -352,14 +360,12 @@ sealed trait EmbeddedKafkaSupport {
       consumer.subscribe(topics.asJava)
       topics.foreach(consumer.partitionsFor)
 
-      while (messagesRead < number) {
-        val records = consumer.poll(5000)
-        if (records.isEmpty) {
-          throw new TimeoutException(
-            "Unable to retrieve a message from Kafka in 5000ms")
-        }
-
+      while (messagesRead < number && System.nanoTime < timeoutNanoTime) {
+        val records = consumer.poll(1000)
         val recordIter = records.iterator()
+        if (resetTimeoutOnEachMessage && recordIter.hasNext) {
+          timeoutNanoTime = System.nanoTime + timeout.toNanos
+        }
         while (recordIter.hasNext && messagesRead < number) {
           val record = recordIter.next()
           val topic = record.topic()
@@ -369,6 +375,9 @@ sealed trait EmbeddedKafkaSupport {
           consumer.commitSync(Map(tp -> om).asJava)
           messagesRead += 1
         }
+      }
+      if (messagesRead < number) {
+        throw new TimeoutException(s"Unable to retrieve $number message(s) from Kafka in $timeout")
       }
       messagesBuffers.map { case (topic, messages) => topic -> messages.toList }
     }
