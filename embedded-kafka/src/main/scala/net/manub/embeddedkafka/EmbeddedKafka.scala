@@ -447,10 +447,9 @@ sealed trait EmbeddedKafkaSupport {
     val properties: Properties = new Properties
     properties.setProperty("zookeeper.connect", zkAddress)
     properties.setProperty("broker.id", "0")
-    properties.setProperty("listener", listener)
+    properties.setProperty("listeners", listener)
     properties.setProperty("advertised.listeners", listener)
     properties.setProperty("auto.create.topics.enable", "true")
-    properties.setProperty("port", config.kafkaPort.toString)
     properties.setProperty("log.dir", kafkaLogDir.toAbsolute.path)
     properties.setProperty("log.flush.interval.messages", 1.toString)
     properties.setProperty("offsets.topic.replication.factor", 1.toString)
