@@ -1,18 +1,12 @@
 package net.manub.embeddedkafka
 
 import java.net.InetSocketAddress
-import java.util.Properties
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.io.Tcp.{Connect, Connected}
 import akka.io.{IO, Tcp}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.concurrent.{
-  Eventually,
-  IntegrationPatience,
-  JavaFutures,
-  ScalaFutures
-}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience, JavaFutures, ScalaFutures}
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
@@ -38,15 +32,7 @@ abstract class EmbeddedKafkaSpecSupport
     super.afterAll()
   }
 
-  lazy val consumerProps: Properties = {
-    val props = new Properties()
-    props.put("group.id", "test")
-    props.put("bootstrap.servers", "localhost:6001")
-    props.put("auto.offset.reset", "earliest")
-    props
-  }
-
-  def kafkaIsAvailable(kafkaPort: Int = 6001): Unit = {
+  def kafkaIsAvailable(kafkaPort: Int = 9092): Unit = {
     system.actorOf(
       TcpClient.props(new InetSocketAddress("localhost", kafkaPort),
                       testActor))
@@ -60,7 +46,7 @@ abstract class EmbeddedKafkaSpecSupport
     expectMsg(1 second, ConnectionSuccessful)
   }
 
-  def kafkaIsNotAvailable(kafkaPort: Int = 6001): Unit = {
+  def kafkaIsNotAvailable(kafkaPort: Int = 9092): Unit = {
     system.actorOf(
       TcpClient.props(new InetSocketAddress("localhost", kafkaPort), testActor))
     expectMsg(1 second, ConnectionFailed)

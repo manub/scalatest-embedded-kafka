@@ -23,7 +23,7 @@ import org.apache.kafka.common.serialization.{
 import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
 import org.scalatest.Suite
 
-import scala.collection.JavaConversions.mapAsJavaMap
+import scala.collection.JavaConverters.mapAsJavaMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
@@ -216,7 +216,7 @@ sealed trait EmbeddedKafkaSupport {
   def publishToKafka[T](topic: String, message: T)(
       implicit config: EmbeddedKafkaConfig,
       serializer: Serializer[T]): Unit =
-    publishToKafka(new KafkaProducer(baseProducerConfig,
+    publishToKafka(new KafkaProducer(mapAsJavaMap[String, Object](baseProducerConfig),
                                      new StringSerializer(),
                                      serializer),
                    new ProducerRecord[String, T](topic, message))
@@ -237,7 +237,7 @@ sealed trait EmbeddedKafkaSupport {
       keySerializer: Serializer[K],
       serializer: Serializer[T]): Unit =
     publishToKafka(
-      new KafkaProducer(baseProducerConfig, keySerializer, serializer),
+      new KafkaProducer(mapAsJavaMap[String, Object](baseProducerConfig), keySerializer, serializer),
       new ProducerRecord(topic, key, message))
 
   private def publishToKafka[K, T](kafkaProducer: KafkaProducer[K, T],
@@ -253,6 +253,16 @@ sealed trait EmbeddedKafkaSupport {
       throw new KafkaUnavailableException(sendResult.failed.get)
   }
 
+  def kafkaProducer[K, T](topic: String, key: K, message: T)(
+    implicit config: EmbeddedKafkaConfig,
+    keySerializer: Serializer[K],
+    serializer: Serializer[T]) = new KafkaProducer[K, T](mapAsJavaMap[String, Object](baseProducerConfig), keySerializer, serializer)
+
+  def kafkaConsumer[K, T](
+    implicit config: EmbeddedKafkaConfig,
+    keyDeserializer: Deserializer[K],
+    deserializer: Deserializer[T]) = new KafkaConsumer[K, T](baseConsumerConfig, keyDeserializer, deserializer)
+
   private def baseProducerConfig(implicit config: EmbeddedKafkaConfig) = Map(
     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
     ProducerConfig.MAX_BLOCK_MS_CONFIG -> 10000.toString,
@@ -266,7 +276,7 @@ sealed trait EmbeddedKafkaSupport {
     props.put("bootstrap.servers", s"localhost:${config.kafkaPort}")
     props.put("auto.offset.reset", "earliest")
     props.put("enable.auto.commit", "false")
-    props.putAll(config.customConsumerProperties)
+    props.putAll(mapAsJavaMap(config.customConsumerProperties))
     props
   }
 
@@ -355,7 +365,7 @@ sealed trait EmbeddedKafkaSupport {
       new KafkaConsumer[String, T](props, new StringDeserializer, deserializer)
 
     val messages = Try {
-      var messagesBuffers = topics.map(_ -> ListBuffer.empty[T]).toMap
+      val messagesBuffers = topics.map(_ -> ListBuffer.empty[T]).toMap
       var messagesRead = 0
       consumer.subscribe(topics.asJava)
       topics.foreach(consumer.partitionsFor)
@@ -398,16 +408,16 @@ sealed trait EmbeddedKafkaSupport {
     def thatSerializesValuesWith[V](serializer: Class[_ <: Serializer[V]])(
         implicit config: EmbeddedKafkaConfig): KafkaProducer[String, V] = {
       val producer = new KafkaProducer[String, V](
-        baseProducerConfig + (ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
-          StringSerializer].getName,
-        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> serializer.getName))
+        mapAsJavaMap[String, Object](baseProducerConfig
+          + (ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName,
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> serializer.getName)))
       producers :+= producer
       producer
     }
 
     def apply[V](implicit valueSerializer: Serializer[V],
                  config: EmbeddedKafkaConfig): KafkaProducer[String, V] = {
-      val producer = new KafkaProducer[String, V](baseProducerConfig(config),
+      val producer = new KafkaProducer[String, V](mapAsJavaMap[String, Object](baseProducerConfig(config)),
                                                   new StringSerializer,
                                                   valueSerializer)
       producers :+= producer
@@ -432,16 +442,19 @@ sealed trait EmbeddedKafkaSupport {
   def startKafka(config: EmbeddedKafkaConfig,
                  kafkaLogDir: Directory): KafkaServer = {
     val zkAddress = s"localhost:${config.zooKeeperPort}"
+    val listener = s"PLAINTEXT://localhost:${config.kafkaPort}"
 
     val properties: Properties = new Properties
     properties.setProperty("zookeeper.connect", zkAddress)
     properties.setProperty("broker.id", "0")
-    properties.setProperty("host.name", "localhost")
-    properties.setProperty("advertised.host.name", "localhost")
+    properties.setProperty("listener", listener)
+    properties.setProperty("advertised.listeners", listener)
     properties.setProperty("auto.create.topics.enable", "true")
     properties.setProperty("port", config.kafkaPort.toString)
     properties.setProperty("log.dir", kafkaLogDir.toAbsolute.path)
     properties.setProperty("log.flush.interval.messages", 1.toString)
+    properties.setProperty("offsets.topic.replication.factor", 1.toString)
+    properties.setProperty("offsets.topic.num.partitions", 1.toString)
 
     // The total memory used for log deduplication across all cleaner threads, keep it small to not exhaust suite memory
     properties.setProperty("log.cleaner.dedupe.buffer.size", "1048577")
