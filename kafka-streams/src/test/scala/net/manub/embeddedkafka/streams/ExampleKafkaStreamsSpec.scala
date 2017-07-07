@@ -12,7 +12,8 @@ class ExampleKafkaStreamsSpec
     with Matchers
     with EmbeddedKafkaStreamsAllInOne {
 
-  implicit val config = EmbeddedKafkaConfig
+  implicit val config =
+    EmbeddedKafkaConfig(kafkaPort = 7000, zooKeeperPort = 7001)
 
   val (inTopic, outTopic) = ("in", "out")
 
