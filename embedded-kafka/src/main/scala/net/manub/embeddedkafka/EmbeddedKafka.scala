@@ -408,8 +408,8 @@ sealed trait EmbeddedKafkaSupport {
     def thatSerializesValuesWith[V](serializer: Class[_ <: Serializer[V]])(
         implicit config: EmbeddedKafkaConfig): KafkaProducer[String, V] = {
       val producer = new KafkaProducer[String, V](
-        mapAsJavaMap[String, Object](baseProducerConfig
-          + (ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[StringSerializer].getName,
+        mapAsJavaMap[String, Object](baseProducerConfig + (ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
+          StringSerializer].getName,
         ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> serializer.getName)))
       producers :+= producer
       producer

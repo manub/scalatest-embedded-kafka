@@ -4,18 +4,29 @@ import java.util.concurrent.TimeoutException
 
 import kafka.admin.AdminUtils
 import kafka.utils.ZkUtils
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
-import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.clients.producer.{
+  KafkaProducer,
+  ProducerConfig,
+  ProducerRecord
+}
+import org.apache.kafka.common.serialization.{
+  ByteArraySerializer,
+  StringDeserializer,
+  StringSerializer
+}
 import org.scalatest.BeforeAndAfterAll
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.{
+  asJavaCollection,
+  mapAsJavaMap
+}
 
 class EmbeddedKafkaMethodsSpec
     extends EmbeddedKafkaSpecSupport
     with EmbeddedKafka
     with BeforeAndAfterAll {
 
-  val consumerPollTimeout = 8000
+  val consumerPollTimeout = 5000
 
   override def beforeAll(): Unit = {
     super.beforeAll()
