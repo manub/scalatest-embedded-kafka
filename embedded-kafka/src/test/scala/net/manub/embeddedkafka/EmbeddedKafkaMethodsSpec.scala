@@ -16,10 +16,7 @@ import org.apache.kafka.common.serialization.{
 }
 import org.scalatest.BeforeAndAfterAll
 
-import scala.collection.JavaConverters.{
-  asJavaCollection,
-  mapAsJavaMap
-}
+import scala.collection.JavaConverters._
 
 class EmbeddedKafkaMethodsSpec
     extends EmbeddedKafkaSpecSupport
@@ -141,13 +138,13 @@ class EmbeddedKafkaMethodsSpec
       val topic = "consume_test_topic"
 
       val producer = new KafkaProducer[String, String](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName,
           ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName
-        )))
+        ).asJava)
 
       whenReady(
         producer.send(new ProducerRecord[String, String](topic, message))) {
@@ -163,13 +160,13 @@ class EmbeddedKafkaMethodsSpec
       val topic = "consume_test_topic"
 
       val producer = new KafkaProducer[String, String](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName,
           ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName
-        )))
+        ).asJava)
 
       messages.foreach { message =>
         producer.send(new ProducerRecord[String, String](topic, message))
@@ -191,13 +188,13 @@ class EmbeddedKafkaMethodsSpec
       val topic = "consume_test_topic"
 
       val producer = new KafkaProducer[String, String](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName,
           ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName
-        )))
+        ).asJava)
 
       import Codecs._
       whenReady(
@@ -219,9 +216,9 @@ class EmbeddedKafkaMethodsSpec
         specificAvroDeserializer[TestAvroClass](TestAvroClass.SCHEMA$)
 
       val producer = new KafkaProducer[String, TestAvroClass](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}"
-        )),
+        ).asJava,
         new StringSerializer,
         specificAvroSerializer[TestAvroClass])
 
@@ -246,13 +243,13 @@ class EmbeddedKafkaMethodsSpec
       val messages = Set("message 1", "message 2", "message 3")
       val topic = "consume_test_topic"
       val producer = new KafkaProducer[String, String](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName,
           ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName
-        )))
+        ).asJava)
 
       messages.foreach { message =>
         producer.send(new ProducerRecord[String, String](topic, message))
@@ -272,13 +269,13 @@ class EmbeddedKafkaMethodsSpec
       val messages = Set("message 1", "message 2", "message 3")
       val topic = "consume_test_topic"
       val producer = new KafkaProducer[String, String](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName,
           ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName
-        )))
+        ).asJava)
 
       messages.foreach { message =>
         producer.send(new ProducerRecord[String, String](topic, message))
@@ -299,13 +296,13 @@ class EmbeddedKafkaMethodsSpec
       val config = EmbeddedKafkaConfig()
       val topicMessagesMap = Map("topic1" -> List("message 1"), "topic2" -> List("message 2a", "message 2b"))
       val producer = new KafkaProducer[String, String](
-        mapAsJavaMap[String, Object](Map(
+        Map[String, Object](
           ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
           ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName,
           ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
             StringSerializer].getName
-        )))
+        ).asJava)
       for ((topic, messages) <- topicMessagesMap; message <- messages) {
         producer.send(new ProducerRecord[String, String](topic, message))
       }
