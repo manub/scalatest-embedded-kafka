@@ -45,7 +45,7 @@ class EmbeddedKafkaMethodsSpec
       publishToKafka(topic, message)
 
       val consumer = kafkaConsumer
-      consumer.subscribe(asJavaCollection(List(topic)))
+      consumer.subscribe(List(topic).asJava)
 
       val records = consumer.poll(consumerPollTimeout)
 
@@ -67,7 +67,7 @@ class EmbeddedKafkaMethodsSpec
       publishToKafka(topic, key, message)
 
       val consumer = kafkaConsumer
-      consumer.subscribe(asJavaCollection(List(topic)))
+      consumer.subscribe(List(topic).asJava)
 
       val records = consumer.poll(consumerPollTimeout)
 
