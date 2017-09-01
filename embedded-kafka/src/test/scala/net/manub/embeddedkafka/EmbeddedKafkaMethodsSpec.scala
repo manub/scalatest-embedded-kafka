@@ -183,6 +183,16 @@ class EmbeddedKafkaMethodsSpec
       producer.close()
     }
 
+    "throw a TimeoutExeption when a message is not available" in {
+      a[TimeoutException] shouldBe thrownBy {
+        consumeFirstStringMessageFrom("non_existing_topic")
+      }
+    }
+  }
+
+  "the consumeFirstMessageFrom method" should {
+    val config = EmbeddedKafkaConfig()
+
     "return a message published to a topic with implicit decoder" in {
       val message = "hello world!"
       val topic = "consume_test_topic"
@@ -227,12 +237,6 @@ class EmbeddedKafkaMethodsSpec
       }
 
       producer.close()
-    }
-
-    "throw a TimeoutExeption when a message is not available" in {
-      a[TimeoutException] shouldBe thrownBy {
-        consumeFirstStringMessageFrom("non_existing_topic")
-      }
     }
   }
 
