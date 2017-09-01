@@ -260,11 +260,10 @@ class EmbeddedKafkaMethodsSpec
       import Codecs._
       whenReady(
         producer.send(new ProducerRecord[String, String](topic, key, message))) {
-        _ => {
+        _ =>
           val res = consumeFirstKeyedMessageFrom[Array[Byte], Array[Byte]](topic)
           res._1 shouldBe key.getBytes
           res._2 shouldBe message.getBytes
-        }
       }
 
       producer.close()
