@@ -240,6 +240,86 @@ class EmbeddedKafkaMethodsSpec
     }
   }
 
+  "the consumeFirstKeyedMessageFrom method" should {
+    val config = EmbeddedKafkaConfig()
+
+    "return a message published to a topic with implicit decoders" in {
+      val key = "greeting"
+      val message = "hello world!"
+      val topic = "consume_test_topic"
+
+      val producer = new KafkaProducer[String, String](
+        Map[String, Object](
+          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
+          ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG -> classOf[
+            StringSerializer].getName,
+          ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG -> classOf[
+            StringSerializer].getName
+        ).asJava)
+
+      import Codecs._
+      whenReady(
+        producer.send(new ProducerRecord[String, String](topic, key, message))) {
+        _ => {
+          val res = consumeFirstKeyedMessageFrom[Array[Byte], Array[Byte]](topic)
+          res._1 shouldBe key.getBytes
+          res._2 shouldBe message.getBytes
+        }
+      }
+
+      producer.close()
+    }
+
+    "return a message published to a topic with custom decoders" in {
+
+      import avro._
+
+      val key = TestAvroClass("key")
+      val message = TestAvroClass("message")
+      val topic = "consume_test_topic"
+      implicit val testAvroClassDecoder =
+        specificAvroDeserializer[TestAvroClass](TestAvroClass.SCHEMA$)
+
+      val producer = new KafkaProducer[TestAvroClass, TestAvroClass](
+        Map[String, Object](
+          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}"
+        ).asJava,
+        specificAvroSerializer[TestAvroClass],
+        specificAvroSerializer[TestAvroClass])
+
+      whenReady(producer.send(new ProducerRecord(topic, key, message))) { _ =>
+        consumeFirstKeyedMessageFrom[TestAvroClass, TestAvroClass](topic) shouldBe (key, message)
+      }
+
+      producer.close()
+    }
+
+    "return a message published to a topic with 2 different decoders" in {
+
+      import avro._
+
+      val key = "key"
+      val message = TestAvroClass("message")
+      val topic = "consume_test_topic"
+      implicit val stringDecoder = new StringDeserializer
+      implicit val testAvroClassDecoder =
+        specificAvroDeserializer[TestAvroClass](TestAvroClass.SCHEMA$)
+
+      val producer = new KafkaProducer[String, TestAvroClass](
+        Map[String, Object](
+          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}"
+        ).asJava,
+        new StringSerializer,
+        specificAvroSerializer[TestAvroClass])
+
+      whenReady(producer.send(new ProducerRecord(topic, key, message))) { _ =>
+        consumeFirstKeyedMessageFrom[String, TestAvroClass](topic) shouldBe (key, message)
+      }
+
+      producer.close()
+    }
+  }
+
   "the consumeNumberStringMessagesFrom method" should {
     val config = EmbeddedKafkaConfig()
 
