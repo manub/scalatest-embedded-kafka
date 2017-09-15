@@ -273,15 +273,14 @@ sealed trait EmbeddedKafkaSupport {
     val futures = messages.map(futureSend)
 
     // Assure all messages sent before returning, and fail on first send error
-    futures.map(f => Try(f.get(10, SECONDS)))
-      .filter(_.isFailure)
-      .foreach(sendResult => throw new KafkaUnavailableException(sendResult.failed.get))
+    val records = futures.map(f => Try(f.get(10, SECONDS)))
+    records.find(_.isFailure).foreach(record => throw new KafkaUnavailableException(record.failed.get))
 
     producer.close()
   }
 
   private def publishToKafka[K, T](kafkaProducer: KafkaProducer[K, T],
-                                   record: ProducerRecord[K, T]) = {
+                                   record: ProducerRecord[K, T]): Unit = {
     val sendFuture = kafkaProducer.send(record)
     val sendResult = Try {
       sendFuture.get(10, SECONDS)
