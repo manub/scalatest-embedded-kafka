@@ -1,11 +1,11 @@
 package net.manub.embeddedkafka
 
 trait EmbeddedKafkaConfig {
-  val kafkaPort: Int
-  val zooKeeperPort: Int
-  val customBrokerProperties: Map[String, String]
-  val customProducerProperties: Map[String, String]
-  val customConsumerProperties: Map[String, String]
+  def kafkaPort: Int
+  def zooKeeperPort: Int
+  def customBrokerProperties: Map[String, String]
+  def customProducerProperties: Map[String, String]
+  def customConsumerProperties: Map[String, String]
 }
 
 case class EmbeddedKafkaConfigImpl(
