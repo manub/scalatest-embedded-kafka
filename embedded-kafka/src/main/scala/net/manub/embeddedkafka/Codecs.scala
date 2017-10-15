@@ -4,7 +4,7 @@ import kafka.serializer._
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization._
 
-/** useful encoders/serializers and decoders/deserializers **/
+/** useful encoders/serializers, decoders/deserializers and [[ConsumerRecord]] decoders**/
 object Codecs {
   implicit val stringEncoder: Encoder[String] = new StringEncoder()
   implicit val nullEncoder: Encoder[Array[Byte]] = new DefaultEncoder()
@@ -24,10 +24,16 @@ object Codecs {
     cr => (cr.key(), cr.value)
   implicit val stringValueCrDecoder: ConsumerRecord[String, String] => String =
     _.value()
+  implicit val stringKeyValueTopicCrDecoder
+    : ConsumerRecord[String, String] => (String, String, String) = cr =>
+    (cr.topic(), cr.key(), cr.value())
 
   implicit val keyNullValueCrDecoder
     : ConsumerRecord[String, Array[Byte]] => (String, Array[Byte]) =
     cr => (cr.key(), cr.value)
   implicit val nullValueCrDecoder
     : ConsumerRecord[String, Array[Byte]] => Array[Byte] = _.value()
+  implicit val keyNullValueTopicCrDecoder
+    : ConsumerRecord[String, Array[Byte]] => (String, String, Array[Byte]) =
+    cr => (cr.topic(), cr.key(), cr.value())
 }
