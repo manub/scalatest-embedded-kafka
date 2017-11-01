@@ -11,7 +11,7 @@ import org.scalatest.Suite
   *
   * e.g.
   * {{{
-  * runStreams(Seq("inputTopic", "outputTopic", streamTopology) {
+  *runStreams(Seq("inputTopic", "outputTopic", streamTopology) {
   *  withConsumer[String, String, Unit] { consumer =>
   *    // here you can publish and consume messages and make assertions
   *    publishToKafka(in, Seq("one-string", "another-string"))
@@ -19,7 +19,7 @@ import org.scalatest.Suite
   *      Seq("one-string" -> "true", "another-string" -> "true")
   *    )
   *  }
-  * }
+  *}
   * }}}
   *
   * @see [[Consumers]]
@@ -40,8 +40,8 @@ trait EmbeddedKafkaStreamsAllInOne
     *                       String-based consumer.
     * @return the result of the testing code
     */
-  def runStreamsWithStringConsumer(topicsToCreate: Seq[String],
-                                   topology: Topology)(block: KafkaConsumer[String, String] => Any)
+  def runStreamsWithStringConsumer(topicsToCreate: Seq[String], topology: Topology)
+                                  (block: KafkaConsumer[String, String] => Any)
                                   (implicit config: EmbeddedKafkaConfig): Any =
     runStreams(topicsToCreate, topology)(withStringConsumer[Any](block))(config)
 }

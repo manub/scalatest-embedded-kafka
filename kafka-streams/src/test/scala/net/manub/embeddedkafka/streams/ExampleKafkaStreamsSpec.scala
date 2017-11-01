@@ -9,7 +9,7 @@ import org.apache.kafka.streams.kstream.{KStream, Produced}
 import org.scalatest.{Matchers, WordSpec}
 
 class ExampleKafkaStreamsSpec
-  extends WordSpec
+    extends WordSpec
     with Matchers
     with EmbeddedKafkaStreamsAllInOne {
 
