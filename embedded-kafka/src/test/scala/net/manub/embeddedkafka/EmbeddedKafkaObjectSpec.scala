@@ -4,6 +4,7 @@ import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializ
 import net.manub.embeddedkafka.EmbeddedKafka._
 
 import scala.collection.JavaConverters._
+import scala.reflect.io.Directory
 
 class EmbeddedKafkaObjectSpec extends EmbeddedKafkaSpecSupport {
 
@@ -34,12 +35,33 @@ class EmbeddedKafkaObjectSpec extends EmbeddedKafkaSpecSupport {
         EmbeddedKafka.stop()
       }
 
-      "multiple EmbeddedKafka can run in parallel" in {
+      "start and stop a specific Kafka" in {
+        val firstBroker = EmbeddedKafka.start()(EmbeddedKafkaConfig(kafkaPort = 7000, zooKeeperPort = 7001))
+        EmbeddedKafka.start()(EmbeddedKafkaConfig(kafkaPort = 8000, zooKeeperPort = 8001))
+
+        kafkaIsAvailable(7000)
+        zookeeperIsAvailable(7001)
+
+        kafkaIsAvailable(8000)
+        zookeeperIsAvailable(8001)
+
+        EmbeddedKafka.stop(firstBroker)
+
+        kafkaIsNotAvailable(7000)
+        zookeeperIsNotAvailable(7001)
+
+        kafkaIsAvailable(8000)
+        zookeeperIsAvailable(8001)
+
+        EmbeddedKafka.stop()
+      }
+
+      "start and stop multiple Kafka instances on specified ports" in {
         val someConfig = EmbeddedKafkaConfig(kafkaPort = 12345, zooKeeperPort = 32111)
-        EmbeddedKafka.start()(someConfig)
+        val someBroker = EmbeddedKafka.start()(someConfig)
 
         val someOtherConfig = EmbeddedKafkaConfig(kafkaPort = 23456, zooKeeperPort = 43211)
-        EmbeddedKafka.start()(someOtherConfig)
+        val someOtherBroker = EmbeddedKafka.start()(someOtherConfig)
 
         val topic = "publish_test_topic_1"
         val someMessage = "hello world!"
@@ -51,6 +73,8 @@ class EmbeddedKafkaObjectSpec extends EmbeddedKafkaSpecSupport {
         publishToKafka(topic, someMessage)(someConfig, serializer)
         publishToKafka(topic, someOtherMessage)(someOtherConfig, serializer)
 
+        // first
+
         val consumer = kafkaConsumer(someConfig, deserializer, deserializer)
         consumer.subscribe(List(topic).asJava)
 
@@ -59,6 +83,8 @@ class EmbeddedKafkaObjectSpec extends EmbeddedKafkaSpecSupport {
 
         val record = records.iterator().next
         record.value shouldBe someMessage
+
+        EmbeddedKafka.stop(someBroker)
 
         // second
 
@@ -71,15 +97,32 @@ class EmbeddedKafkaObjectSpec extends EmbeddedKafkaSpecSupport {
         val someOtherRecord = moreRecords.iterator().next
         someOtherRecord.value shouldBe someOtherMessage
 
-        EmbeddedKafka.stop()
-        EmbeddedKafka.stop()
+        EmbeddedKafka.stop(someOtherBroker)
       }
     }
 
-    "invoking the isRunnning method" should {
-      "return whether both Kafka and Zookeeper are running" in {
+    "invoking the isRunning method" should {
+      "return true when both Kafka and Zookeeper are running" in {
         EmbeddedKafka.start()
         EmbeddedKafka.isRunning shouldBe true
+        EmbeddedKafka.stop()
+        EmbeddedKafka.isRunning shouldBe false
+      }
+
+      "return false when only Kafka is running" in {
+        val unmanagedZookeeper = EmbeddedKafka.startZooKeeper(6000, Directory.makeTemp("zookeeper-test-logs"))
+
+        EmbeddedKafka.startKafka(Directory.makeTemp("kafka-test-logs"))
+        EmbeddedKafka.isRunning shouldBe false
+        EmbeddedKafka.stop()
+        EmbeddedKafka.isRunning shouldBe false
+
+        unmanagedZookeeper.shutdown()
+      }
+
+      "return false when only Zookeeper is running" in {
+        EmbeddedKafka.startZooKeeper(Directory.makeTemp("zookeeper-test-logs"))
+        EmbeddedKafka.isRunning shouldBe false
         EmbeddedKafka.stop()
         EmbeddedKafka.isRunning shouldBe false
       }
