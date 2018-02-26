@@ -64,29 +64,16 @@ class EmbeddedKafkaObjectSpec extends EmbeddedKafkaSpecSupport {
         val someOtherBroker = EmbeddedKafka.start()(someOtherConfig)
 
         val topic = "publish_test_topic_1"
-        val someMessage = "hello world!"
         val someOtherMessage = "another message!"
 
         val serializer = new StringSerializer
         val deserializer = new StringDeserializer
 
-        publishToKafka(topic, someMessage)(someConfig, serializer)
+        publishToKafka(topic, "hello world!")(someConfig, serializer)
         publishToKafka(topic, someOtherMessage)(someOtherConfig, serializer)
 
-        // first
-
-        val consumer = kafkaConsumer(someConfig, deserializer, deserializer)
-        consumer.subscribe(List(topic).asJava)
-
-        val records = consumer.poll(consumerPollTimeout)
-        records.count shouldBe 1
-
-        val record = records.iterator().next
-        record.value shouldBe someMessage
-
+        kafkaIsAvailable(someConfig.kafkaPort)
         EmbeddedKafka.stop(someBroker)
-
-        // second
 
         val anotherConsumer = kafkaConsumer(someOtherConfig, deserializer, deserializer)
         anotherConsumer.subscribe(List(topic).asJava)
