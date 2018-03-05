@@ -97,9 +97,7 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
     * Stops all in memory Zookeeper instances, preserving the logs directories.
     */
   def stopZooKeeper(): Unit = {
-    val factories = servers
-      .filter(_.isInstanceOf[EmbeddedZ])
-      .asInstanceOf[Seq[EmbeddedZ]]
+    val factories = servers.toFilteredSeq[EmbeddedZ](isEmbeddedZ)
 
     factories
       .foreach(_.stop(false))
@@ -111,9 +109,7 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
     * Stops all in memory Kafka instances, preserving the logs directories.
     */
   def stopKafka(): Unit = {
-    val brokers = servers
-      .filter(_.isInstanceOf[EmbeddedK])
-      .asInstanceOf[Seq[EmbeddedK]]
+    val brokers = servers.toFilteredSeq[EmbeddedK](isEmbeddedK)
 
     brokers
       .foreach(_.stop(false))
@@ -122,13 +118,17 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
   }
 
   /**
-    * Returns whether the in memory Kafka and Zookeeper are running.
+    * Returns whether the in memory Kafka and Zookeeper are both running.
     */
-  def isRunning: Boolean =
-    servers
-      .filter(_.isInstanceOf[EmbeddedK])
-      .asInstanceOf[Seq[EmbeddedK]]
-      .exists(_.factory.isDefined)
+  def isRunning: Boolean = servers.toFilteredSeq[EmbeddedK](isEmbeddedK).exists(_.factory.isDefined)
+
+  private def isEmbeddedK(server: EmbeddedServer): Boolean = server.isInstanceOf[EmbeddedK]
+  private def isEmbeddedZ(server: EmbeddedServer): Boolean = server.isInstanceOf[EmbeddedZ]
+
+  implicit class ServerOps(servers: Seq[EmbeddedServer]) {
+    def toFilteredSeq[T <: EmbeddedServer](filter: EmbeddedServer => Boolean): Seq[T] =
+      servers.filter(filter).asInstanceOf[Seq[T]]
+  }
 }
 
 sealed trait EmbeddedKafkaSupport {
