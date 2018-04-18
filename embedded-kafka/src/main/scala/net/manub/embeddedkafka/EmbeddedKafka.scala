@@ -174,7 +174,7 @@ object EmbeddedKafka extends EmbeddedKafkaSupport {
 }
 
 sealed trait EmbeddedKafkaSupport {
-  private val executorService = Executors.newFixedThreadPool(2)
+  private val executorService = Executors.newFixedThreadPool(3)
   implicit private val executionContext: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(executorService)
 
