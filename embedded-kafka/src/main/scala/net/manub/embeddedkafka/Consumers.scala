@@ -1,8 +1,6 @@
 package net.manub.embeddedkafka
 
-import java.util.Properties
-
-import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.common.serialization.Deserializer
 
 /** Utility trait for easily creating Kafka consumers and accessing their consumed messages. */
@@ -51,12 +49,14 @@ trait Consumers {
     */
   def newConsumer[K: Deserializer, V: Deserializer]()(
       implicit config: EmbeddedKafkaConfig): KafkaConsumer[K, V] = {
-    val props = new Properties()
-    props.put("group.id", UUIDs.newUuid().toString)
-    props.put("bootstrap.servers", s"localhost:${config.kafkaPort}")
-    props.put("auto.offset.reset", "earliest")
+    import scala.collection.JavaConverters._
 
-    new KafkaConsumer[K, V](props,
+    val consumerConfig = Map[String, Object](
+      ConsumerConfig.GROUP_ID_CONFIG -> UUIDs.newUuid().toString,
+      ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
+      ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "earliest"
+    )
+    new KafkaConsumer[K, V](consumerConfig.asJava,
                             implicitly[Deserializer[K]],
                             implicitly[Deserializer[V]])
   }

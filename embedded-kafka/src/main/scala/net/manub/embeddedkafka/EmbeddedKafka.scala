@@ -8,7 +8,11 @@ import io.confluent.kafka.schemaregistry.RestApp
 import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel
 import kafka.server.{KafkaConfig, KafkaServer}
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
-import org.apache.kafka.clients.consumer.{KafkaConsumer, OffsetAndMetadata}
+import org.apache.kafka.clients.consumer.{
+  ConsumerConfig,
+  KafkaConsumer,
+  OffsetAndMetadata
+}
 import org.apache.kafka.clients.producer.{
   KafkaProducer,
   ProducerConfig,
@@ -398,7 +402,9 @@ sealed trait EmbeddedKafkaSupport {
   def kafkaConsumer[K, T](implicit config: EmbeddedKafkaConfig,
                           keyDeserializer: Deserializer[K],
                           deserializer: Deserializer[T]) =
-    new KafkaConsumer[K, T](baseConsumerConfig, keyDeserializer, deserializer)
+    new KafkaConsumer[K, T](baseConsumerConfig.asJava,
+                            keyDeserializer,
+                            deserializer)
 
   private def baseProducerConfig(implicit config: EmbeddedKafkaConfig) =
     Map[String, Object](
@@ -406,20 +412,16 @@ sealed trait EmbeddedKafkaSupport {
       ProducerConfig.MAX_BLOCK_MS_CONFIG -> 10000.toString,
       ProducerConfig.RETRY_BACKOFF_MS_CONFIG -> 1000.toString
     ) ++ avro.schemaregistry.configForSchemaRegistry
-      .getOrElse(Map.empty[String, Object]) ++ config.customProducerProperties
+      .getOrElse(Map.empty) ++ config.customProducerProperties
 
-  private def baseConsumerConfig(
-      implicit config: EmbeddedKafkaConfig): Properties = {
-    val props = new Properties()
-    props.put("group.id", s"embedded-kafka-spec")
-    props.put("bootstrap.servers", s"localhost:${config.kafkaPort}")
-    props.put("auto.offset.reset", "earliest")
-    props.put("enable.auto.commit", "false")
-    avro.schemaregistry.consumerConfigForSchemaRegistry.foreach(m =>
-      props.putAll(m.asJava))
-    props.putAll(config.customConsumerProperties.asJava)
-    props
-  }
+  private def baseConsumerConfig(implicit config: EmbeddedKafkaConfig) =
+    Map[String, Object](
+      ConsumerConfig.GROUP_ID_CONFIG -> "embedded-kafka-spec",
+      ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
+      ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "earliest",
+      ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG -> false.toString
+    ) ++ avro.schemaregistry.consumerConfigForSchemaRegistry
+      .getOrElse(Map.empty) ++ config.customConsumerProperties
 
   def consumeFirstStringMessageFrom(topic: String, autoCommit: Boolean = false)(
       implicit config: EmbeddedKafkaConfig): String =
@@ -582,15 +584,14 @@ sealed trait EmbeddedKafkaSupport {
       implicit config: EmbeddedKafkaConfig,
       keyDeserializer: Deserializer[K],
       valueDeserializer: Deserializer[V]): Map[String, List[(K, V)]] = {
-
-    import scala.collection.JavaConverters._
-
-    val props = baseConsumerConfig
-    props.put("enable.auto.commit", autoCommit.toString)
+    val consumerProperties = baseConsumerConfig ++ Map[String, Object](
+      ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG -> autoCommit.toString
+    )
 
     var timeoutNanoTime = System.nanoTime + timeout.toNanos
-    val consumer =
-      new KafkaConsumer[K, V](props, keyDeserializer, valueDeserializer)
+    val consumer = new KafkaConsumer[K, V](consumerProperties.asJava,
+                                           keyDeserializer,
+                                           valueDeserializer)
 
     val messages = Try {
       val messagesBuffers = topics.map(_ -> ListBuffer.empty[(K, V)]).toMap
@@ -692,28 +693,23 @@ sealed trait EmbeddedKafkaSupport {
     val zkAddress = s"localhost:$zooKeeperPort"
     val listener = s"PLAINTEXT://localhost:$kafkaPort"
 
-    val properties = new Properties
-    properties.setProperty("zookeeper.connect", zkAddress)
-    properties.setProperty("broker.id", "0")
-    properties.setProperty("listeners", listener)
-    properties.setProperty("advertised.listeners", listener)
-    properties.setProperty("auto.create.topics.enable", "true")
-    properties.setProperty("log.dir", kafkaLogDir.toAbsolute.path)
-    properties.setProperty("log.flush.interval.messages", 1.toString)
-    properties.setProperty("offsets.topic.replication.factor", 1.toString)
-    properties.setProperty("offsets.topic.num.partitions", 1.toString)
-    properties.setProperty("transaction.state.log.replication.factor",
-                           1.toString)
-    properties.setProperty("transaction.state.log.min.isr", 1.toString)
+    val brokerProperties = Map[String, Object](
+      "zookeeper.connect" -> zkAddress,
+      "broker.id" -> 0.toString,
+      "listeners" -> listener,
+      "advertised.listeners" -> listener,
+      "auto.create.topics.enable" -> true.toString,
+      "log.dir" -> kafkaLogDir.toAbsolute.path,
+      "log.flush.interval.messages" -> 1.toString,
+      "offsets.topic.replication.factor" -> 1.toString,
+      "offsets.topic.num.partitions" -> 1.toString,
+      "transaction.state.log.replication.factor" -> 1.toString,
+      "transaction.state.log.min.isr" -> 1.toString,
+      // The total memory used for log deduplication across all cleaner threads, keep it small to not exhaust suite memory
+      "log.cleaner.dedupe.buffer.size" -> 1048577.toString
+    ) ++ customBrokerProperties
 
-    // The total memory used for log deduplication across all cleaner threads, keep it small to not exhaust suite memory
-    properties.setProperty("log.cleaner.dedupe.buffer.size", "1048577")
-
-    customBrokerProperties.foreach {
-      case (key, value) => properties.setProperty(key, value)
-    }
-
-    val broker = new KafkaServer(new KafkaConfig(properties))
+    val broker = new KafkaServer(new KafkaConfig(brokerProperties.asJava))
     broker.startup()
     broker
   }
