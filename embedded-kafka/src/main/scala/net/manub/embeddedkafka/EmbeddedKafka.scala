@@ -18,6 +18,7 @@ import org.apache.kafka.clients.producer.{
   ProducerConfig,
   ProducerRecord
 }
+import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.apache.kafka.common.serialization.{
   Deserializer,
   Serializer,
@@ -691,22 +692,22 @@ sealed trait EmbeddedKafkaSupport {
                          customBrokerProperties: Map[String, String],
                          kafkaLogDir: Directory) = {
     val zkAddress = s"localhost:$zooKeeperPort"
-    val listener = s"PLAINTEXT://localhost:$kafkaPort"
+    val listener = s"${SecurityProtocol.PLAINTEXT}://localhost:$kafkaPort"
 
     val brokerProperties = Map[String, Object](
-      "zookeeper.connect" -> zkAddress,
-      "broker.id" -> 0.toString,
-      "listeners" -> listener,
-      "advertised.listeners" -> listener,
-      "auto.create.topics.enable" -> true.toString,
-      "log.dir" -> kafkaLogDir.toAbsolute.path,
-      "log.flush.interval.messages" -> 1.toString,
-      "offsets.topic.replication.factor" -> 1.toString,
-      "offsets.topic.num.partitions" -> 1.toString,
-      "transaction.state.log.replication.factor" -> 1.toString,
-      "transaction.state.log.min.isr" -> 1.toString,
+      KafkaConfig.ZkConnectProp -> zkAddress,
+      KafkaConfig.BrokerIdProp -> 0.toString,
+      KafkaConfig.ListenersProp -> listener,
+      KafkaConfig.AdvertisedListenersProp -> listener,
+      KafkaConfig.AutoCreateTopicsEnableProp -> true.toString,
+      KafkaConfig.LogDirProp -> kafkaLogDir.toAbsolute.path,
+      KafkaConfig.LogFlushIntervalMessagesProp -> 1.toString,
+      KafkaConfig.OffsetsTopicReplicationFactorProp -> 1.toString,
+      KafkaConfig.OffsetsTopicPartitionsProp -> 1.toString,
+      KafkaConfig.TransactionsTopicReplicationFactorProp -> 1.toString,
+      KafkaConfig.TransactionsTopicMinISRProp -> 1.toString,
       // The total memory used for log deduplication across all cleaner threads, keep it small to not exhaust suite memory
-      "log.cleaner.dedupe.buffer.size" -> 1048577.toString
+      KafkaConfig.LogCleanerDedupeBufferSizeProp -> 1048577.toString
     ) ++ customBrokerProperties
 
     val broker = new KafkaServer(new KafkaConfig(brokerProperties.asJava))
