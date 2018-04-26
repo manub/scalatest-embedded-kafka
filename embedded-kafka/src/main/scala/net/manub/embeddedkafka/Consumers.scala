@@ -1,6 +1,10 @@
 package net.manub.embeddedkafka
 
-import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
+import org.apache.kafka.clients.consumer.{
+  ConsumerConfig,
+  KafkaConsumer,
+  OffsetResetStrategy
+}
 import org.apache.kafka.common.serialization.Deserializer
 
 /** Utility trait for easily creating Kafka consumers and accessing their consumed messages. */
@@ -54,7 +58,7 @@ trait Consumers {
     val consumerConfig = Map[String, Object](
       ConsumerConfig.GROUP_ID_CONFIG -> UUIDs.newUuid().toString,
       ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
-      ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "earliest"
+      ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> OffsetResetStrategy.EARLIEST.toString.toLowerCase
     )
     new KafkaConsumer[K, V](consumerConfig.asJava,
                             implicitly[Deserializer[K]],

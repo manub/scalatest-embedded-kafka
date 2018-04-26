@@ -11,7 +11,8 @@ import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.clients.consumer.{
   ConsumerConfig,
   KafkaConsumer,
-  OffsetAndMetadata
+  OffsetAndMetadata,
+  OffsetResetStrategy
 }
 import org.apache.kafka.clients.producer.{
   KafkaProducer,
@@ -419,7 +420,7 @@ sealed trait EmbeddedKafkaSupport {
     Map[String, Object](
       ConsumerConfig.GROUP_ID_CONFIG -> "embedded-kafka-spec",
       ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:${config.kafkaPort}",
-      ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "earliest",
+      ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> OffsetResetStrategy.EARLIEST.toString.toLowerCase,
       ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG -> false.toString
     ) ++ avro.schemaregistry.consumerConfigForSchemaRegistry
       .getOrElse(Map.empty) ++ config.customConsumerProperties
