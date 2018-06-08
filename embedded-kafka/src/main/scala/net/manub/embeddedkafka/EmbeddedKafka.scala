@@ -120,7 +120,7 @@ object EmbeddedKafka extends EmbeddedKafkaSupport[EmbeddedKafkaConfig] {
     */
   def stop(server: EmbeddedServer): Unit = {
     server.stop(true)
-    servers = servers.filter(x => x != server)
+    servers = servers.filter(_ != server)
   }
 
   /**
