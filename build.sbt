@@ -2,8 +2,8 @@ import sbtrelease.Version
 
 parallelExecution in ThisBuild := false
 
-val kafkaVersion = "1.1.1"
-val confluentVersion = "4.1.1"
+val kafkaVersion = "2.0.0"
+val confluentVersion = "5.0.0"
 val akkaVersion = "2.5.14"
 
 lazy val commonSettings = Seq(
@@ -52,6 +52,13 @@ lazy val releaseSettings = Seq(
   releaseVersionBump := Version.Bump.Minor,
   releaseCrossBuild := true
 )
+
+// https://github.com/sbt/sbt/issues/3618
+// [error] (kafkaStreams / update) sbt.librarymanagement.ResolveException: download failed: javax.ws.rs#javax.ws.rs-api;2.1!javax.ws.rs-api.${packaging.type}
+val workaround = {
+  sys.props += "packaging.type" -> "jar"
+  ()
+}
 
 lazy val root = (project in file("."))
   .settings(name := "scalatest-embedded-kafka-root")
