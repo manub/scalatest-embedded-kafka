@@ -8,8 +8,8 @@ val akkaVersion = "2.5.14"
 
 lazy val commonSettings = Seq(
   organization := "net.manub",
-  scalaVersion := "2.12.6",
-  crossScalaVersions := Seq("2.12.6", "2.11.12"),
+  scalaVersion := "2.12.8",
+  crossScalaVersions := Seq("2.12.8", "2.11.12"),
   homepage := Some(url("https://github.com/manub/scalatest-embedded-kafka")),
   parallelExecution in Test := false,
   logBuffered in Test := false,
