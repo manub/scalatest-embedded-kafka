@@ -1,8 +1,7 @@
+**Note:** *This repository shortly will be no longer maintained. New versions will be available at https://github.com/embeddedkafka/embedded-kafka and https://github.com/embeddedkafka/embedded-kafka-schema-registry respectively.*
+
 # scalatest-embedded-kafka
 A library that provides an in-memory Kafka instance to run your tests against.
-
-
-**This repository shortly will be no longer maintained. The new version is available at https://github.com/embeddedkafka/embedded-kafka**
 
 *As of version 1.1.1 the library is not dependent anymore on ScalaTest and won't transitively bring ScalaTest into your build.*
 
