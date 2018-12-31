@@ -1,6 +1,7 @@
 package net.manub.embeddedkafka.streams
 
 import java.nio.file.Files
+import java.util.Properties
 
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.clients.consumer.{ConsumerConfig, OffsetResetStrategy}
@@ -19,7 +20,7 @@ trait TestStreamsConfig {
     */
   def streamConfig(streamName: String,
                    extraConfig: Map[String, AnyRef] = Map.empty)(
-      implicit kafkaConfig: EmbeddedKafkaConfig): StreamsConfig = {
+      implicit kafkaConfig: EmbeddedKafkaConfig): Properties = {
     import scala.collection.JavaConverters._
 
     val defaultConfig = Map(
@@ -33,6 +34,9 @@ trait TestStreamsConfig {
     )
     val configOverwrittenByExtra = defaultConfig ++
       extraConfig
-    new StreamsConfig(configOverwrittenByExtra.asJava)
+
+    val props = new Properties()
+    props.putAll(configOverwrittenByExtra.asJava)
+    props
   }
 }
