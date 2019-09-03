@@ -13,9 +13,7 @@ import org.apache.avro.specific.{
 import org.apache.kafka.common.serialization.{Deserializer, Serializer}
 
 class KafkaAvroDeserializer[T <: SpecificRecord](schema: Schema)
-    extends Deserializer[T]
-    with NoOpConfiguration
-    with NoOpClose {
+    extends Deserializer[T] {
 
   private val reader = new SpecificDatumReader[T](schema)
 
@@ -25,10 +23,7 @@ class KafkaAvroDeserializer[T <: SpecificRecord](schema: Schema)
   }
 }
 
-class KafkaAvroSerializer[T <: SpecificRecord]()
-    extends Serializer[T]
-    with NoOpConfiguration
-    with NoOpClose {
+class KafkaAvroSerializer[T <: SpecificRecord]() extends Serializer[T] {
 
   private def toBytes(nullableData: T): Array[Byte] =
     Option(nullableData).fold[Array[Byte]](null) { data =>
