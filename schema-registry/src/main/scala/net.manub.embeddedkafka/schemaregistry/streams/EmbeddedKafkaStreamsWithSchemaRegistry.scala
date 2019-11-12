@@ -39,11 +39,9 @@ trait EmbeddedKafkaStreamsWithSchemaRegistry
     withRunningKafka {
       topicsToCreate.foreach(topic => createCustomTopic(topic))
       val streamId = UUIDs.newUuid().toString
-      val streams =
-        new KafkaStreams(
-          topology,
-          streamConfig(streamId,
-                       extraConfig ++ consumerConfigForSchemaRegistry))
+      val streams = new KafkaStreams(
+        topology,
+        streamProps(streamId, extraConfig ++ consumerConfigForSchemaRegistry))
       streams.start()
       try {
         block
