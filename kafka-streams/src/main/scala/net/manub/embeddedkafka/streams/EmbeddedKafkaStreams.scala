@@ -30,7 +30,7 @@ trait EmbeddedKafkaStreams extends EmbeddedKafka with TestStreamsConfig {
       topicsToCreate.foreach(topic => createCustomTopic(topic))
       val streamId = UUIDs.newUuid().toString
       val streams =
-        new KafkaStreams(topology, streamConfig(streamId, extraConfig))
+        new KafkaStreams(topology, streamProps(streamId, extraConfig))
       streams.start()
       try {
         block
